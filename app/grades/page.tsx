@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { isAuthenticated, fetchWithAuth, getUserId } from '@/lib/auth';
+import { fetchWithAuth, getUserId } from '@/lib/auth';
 import { CourseGrades } from '@/components/grades/course-grades';
+import { gradesService } from '@/services/grades';
 
 interface ExamGrade {
   course: string;
@@ -29,35 +29,18 @@ interface GradesResponse {
 }
 
 export default function GradesPage() {
-  const router = useRouter();
-  const API_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
   const [grades, setGrades] = useState<StudentCourseGrades[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      console.log('User not authenticated, redirecting to login...');
-      router.push('/login');
-      return;
-    }
-
     const fetchGrades = async () => {
-      try {
-        const userId = getUserId();
-        console.log('Fetching grades for user:', userId);
-        if (!userId) {
-          throw new Error('Student ID not found');
-        }
-        
-        const url = `${API_URL}/api/grades/${userId}`;
-        console.log('Making request to:', url);    
-        const response = await fetchWithAuth(url);
+      try {    
+        const response = await gradesService.getCourseGrades();
         if (!response.ok) {
           throw new Error('Failed to fetch grades');
         }
         const data = await response.json();
-        console.log('Received grades:', data);
         setGrades(data?.courses || []);
       } catch (err) {
         console.error('Error fetching grades:', err);
@@ -69,7 +52,7 @@ export default function GradesPage() {
     };
 
     fetchGrades();
-  }, [API_URL, router]);
+  }, []);
 
   if (isLoading) {
     return (
