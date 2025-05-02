@@ -1,17 +1,19 @@
-import { fetchWithAuth, getUserId } from '@/lib/auth';
+import { fetchWithAuth } from '@/lib/api-client';
 
 export interface Student {
   id: string;
-  enrolled_courses: Course_title[];
-}
-  
-export interface Course_title {
-  id: string;
-  grade: number;
+  name: string;
+  email: string;
+  enrolled_courses: string[];
 }
 
 export const studentService = {
-  getStudentCourses: async () => {
-    return fetchWithAuth(`/students/${getUserId()}/courses`);
-  },
+  getStudent: (id: string) => 
+    fetchWithAuth(`/students/${id}`),
+  
+  getStudentCourses: (id: string) => 
+    fetchWithAuth(`/students/${id}/courses`),
+  
+  getStudentGrades: (id: string) => 
+    fetchWithAuth(`/students/${id}/courses/grades`),
 };

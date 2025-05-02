@@ -1,4 +1,4 @@
-import { fetchWithAuth, getUserId } from '@/lib/auth';
+import { fetchWithAuth } from '@/lib/api-client';
 
 export interface Staff {
   id: string;
@@ -10,9 +10,9 @@ export interface Staff {
 }
 
 export const staffService = {
-  getStaff: () => 
-    fetchWithAuth(`/staff/${getUserId()}`),
+  getStaff: (id: string) => 
+    fetchWithAuth(`/staff/${id}`),
   
-  getStaffCourses: () => 
-    fetchWithAuth(`/staff/${getUserId()}/courses`),
+  getStaffCourses: (id: string) => 
+    fetchWithAuth(`/staff/${id}/courses`),
 };
