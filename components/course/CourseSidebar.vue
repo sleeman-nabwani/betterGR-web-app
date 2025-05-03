@@ -6,14 +6,14 @@
     <nav class="p-2">
       <ul class="space-y-1">
         <li v-for="item in visibleItems" :key="item.id">
-          <a 
-            :href="`#${item.id}`" 
-            class="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+          <button 
+            @click="handleSectionClick(item.id)"
+            class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
             :class="{ 'bg-muted/70': activeSection === item.id }"
           >
-            <component :is="item.icon" class="h-4 w-4" />
-            <span>{{ item.label }}</span>
-          </a>
+            <component :is="getIconForSection(item.id)" class="h-4 w-4" />
+            <span>{{ item.title || item.label }}</span>
+          </button>
         </li>
       </ul>
     </nav>
@@ -36,20 +36,23 @@ import {
 } from 'lucide-vue-next'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-// Default navigation items with their icons
-const defaultItems = [
-  { id: 'overview', label: 'Course Overview', icon: BookOpen, default: true },
-  { id: 'materials', label: 'Course Materials', icon: FileText, default: true },
-  { id: 'assignments', label: 'Assignments', icon: ClipboardList, default: true },
-  { id: 'announcements', label: 'Announcements', icon: Bell, default: true },
-  { id: 'syllabus', label: 'Syllabus', icon: BookMarked, default: true },
-  { id: 'grades', label: 'Grades', icon: BarChart3, default: true },
-  { id: 'schedule', label: 'Schedule', icon: Calendar, default: false },
-  { id: 'instructors', label: 'Instructors', icon: Users, default: false },
-  { id: 'faq', label: 'FAQ', icon: HelpCircle, default: false },
-  { id: 'discussions', label: 'Discussions', icon: MessageSquare, default: false },
-  { id: 'resources', label: 'External Resources', icon: Link, default: false }
-]
+// Define emits
+const emit = defineEmits(['section-click'])
+
+// Icon mapping
+const sectionIcons = {
+  'overview': BookOpen,
+  'materials': FileText,
+  'assignments': ClipboardList,
+  'announcements': Bell,
+  'syllabus': BookMarked,
+  'grades': BarChart3,
+  'schedule': Calendar,
+  'instructors': Users,
+  'faq': HelpCircle,
+  'discussions': MessageSquare,
+  'resources': Link
+}
 
 const props = defineProps({
   // Title for the sidebar
@@ -57,7 +60,7 @@ const props = defineProps({
     type: String,
     default: 'Course Navigation'
   },
-  // List of section IDs to include (if not provided, will use defaults)
+  // List of section objects to include
   sections: {
     type: Array,
     default: () => []
@@ -75,13 +78,21 @@ const activeSection = ref('')
 // Compute which items should be visible based on props
 const visibleItems = computed(() => {
   if (props.sections && props.sections.length > 0) {
-    // If specific sections are requested, filter to only those
-    return defaultItems.filter(item => props.sections.includes(item.id))
-  } else {
-    // Otherwise use the default items
-    return defaultItems.filter(item => item.default)
+    return props.sections
   }
+  return []
 })
+
+// Get the appropriate icon for a section
+function getIconForSection(sectionId) {
+  return sectionIcons[sectionId] || BookOpen
+}
+
+// Handle section click
+function handleSectionClick(sectionId) {
+  activeSection.value = sectionId
+  emit('section-click', sectionId)
+}
 
 // Track scroll position to highlight the active section
 const updateActiveSection = () => {

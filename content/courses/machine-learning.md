@@ -1,9 +1,20 @@
 ---
 title: Machine Learning Fundamentals
-code: CS410
-instructor: Dr. Alan Turing
-semester: Spring 2025
-credits: 4
+courseMeta:
+  code: CS410
+  instructor: Dr. Alan Turing
+  semester: Spring 2025
+  credits: 4
+  # Use auto-generated kebab-case IDs
+  sections:
+    - course-overview
+    - learning-objectives
+    - topics-covered
+    - course-schedule
+    - assessment
+    - required-textbooks
+    - assignments
+    - resources
 ---
 
 # Course Overview
@@ -52,17 +63,6 @@ Students will learn the theoretical foundations and practical applications of ma
 
 - "Pattern Recognition and Machine Learning" by Christopher Bishop
 - "Deep Learning" by Ian Goodfellow, Yoshua Bengio, and Aaron Courville
-
-## Course Schedule
-
-1. Introduction to Machine Learning
-2. Linear Regression
-3. Logistic Regression
-4. Decision Trees
-5. Support Vector Machines
-6. Neural Networks
-7. Clustering Algorithms
-8. Dimensionality Reduction
 
 ## Assignments
 

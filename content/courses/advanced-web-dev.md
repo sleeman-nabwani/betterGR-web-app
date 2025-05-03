@@ -1,36 +1,24 @@
 ---
 title: Advanced Web Development
-code: CS304
-semester: Spring 2025
-instructor: Dr. Jane Smith
-credits: 3
-sections:
-  - overview
-  - materials
-  - assignments
-  - syllabus
-  - discussions
-  - resources
+courseMeta:
+  code: CS304
+  semester: Spring 2025
+  instructor: Dr. Jane Smith
+  credits: 3
+  sections:
+    - course-overview
+    - course-materials
+    - assignments
+    - syllabus
+    - discussions
+    - external-resources
 ---
 
-::course-sidebar
----
-sections:
-  - overview
-  - materials
-  - assignments
-  - syllabus
-  - discussions
-  - resources
-title: CS304 Navigation
----
-::
-
-## Course Overview {#overview}
+## Course Overview
 
 This course provides an in-depth exploration of modern web development techniques...
 
-## Course Materials {#materials}
+## Course Materials
 
 ### Required Textbooks
 
@@ -43,13 +31,13 @@ This course provides an in-depth exploration of modern web development technique
 - Git
 - Visual Studio Code (recommended)
 
-## Assignments {#assignments}
+## Assignments
 
 1. **Weekly Programming Exercises** - 20%
 2. **Midterm Project** - 30%
 3. **Final Project** - 50%
 
-## Syllabus {#syllabus}
+## Syllabus
 
 ### Learning Objectives
 
@@ -58,7 +46,7 @@ This course provides an in-depth exploration of modern web development technique
 - Implement modern frontend frameworks
 - Develop RESTful APIs with Node.js
 
-## Discussions {#discussions}
+## Discussions
 
 Please use the course forum for all questions related to assignments and lectures.
 
@@ -69,7 +57,7 @@ Please use the course forum for all questions related to assignments and lecture
 3. Format code using markdown blocks
 4. Be respectful of others
 
-## External Resources {#resources}
+## External Resources
 
 - [MDN Web Docs](https://developer.mozilla.org/)
 - [CSS Tricks](https://css-tricks.com/)

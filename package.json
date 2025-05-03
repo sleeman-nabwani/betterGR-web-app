@@ -12,7 +12,9 @@
     "@nuxt/content": "^3.5.1",
     "@nuxtjs/color-mode": "^3.3.3",
     "@vueuse/core": "^10.9.0",
+    "gray-matter": "^4.0.3",
     "lucide-vue-next": "^0.363.0",
+    "marked": "^15.0.11",
     "vue": "^3.4.21"
   },
   "devDependencies": {
