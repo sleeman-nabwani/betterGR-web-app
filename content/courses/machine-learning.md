@@ -17,7 +17,7 @@ courseMeta:
     - resources
 ---
 
-# Course Overview
+## Course Overview
 
 This course provides an introduction to machine learning algorithms and techniques.
 Students will learn the theoretical foundations and practical applications of machine learning.
