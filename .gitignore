@@ -11,6 +11,8 @@
 # next.js
 /.nuxt/
 /out/
+/.data/
+/.output/
 
 # production
 /build
