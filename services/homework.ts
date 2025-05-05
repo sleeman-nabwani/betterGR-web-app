@@ -1,4 +1,4 @@
-import { fetchWithAuth } from '@/lib/auth';
+import { fetchWithAuth } from '@/lib/api-client';
 
 export interface Homework {
   id: string;
