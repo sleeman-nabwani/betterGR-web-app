@@ -1,86 +1,145 @@
 <template>
   <div class="relative">
     <button
-      @click="isOpen = !isOpen"
-      class="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+      @click="toggleDropdown"
+      class="flex items-center space-x-2 text-sm rounded-full py-1 px-3 hover:bg-gray-200 transition focus:outline-none"
     >
-      <div class="relative w-8 h-8 overflow-hidden rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border border-border">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=technion"
-          alt="User avatar"
-          class="w-full h-full object-cover"
-        />
-        <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background"></div>
+      <div class="rounded-full bg-blue-600 text-white h-8 w-8 flex items-center justify-center">
+        <span v-if="!isLoading">
+          <ClientOnly>
+            {{ userName ? userName.charAt(0).toUpperCase() : '?' }}
+          </ClientOnly>
+        </span>
+        <span v-else>...</span>
       </div>
-      <div class="hidden md:block text-left">
-        <div class="text-sm font-medium">Student</div>
-      </div>
-      <ChevronDown class="hidden sm:block h-4 w-4 text-muted-foreground transition-transform" :class="{ 'rotate-180': isOpen }" />
+      <span class="hidden md:inline text-gray-800 font-medium">
+        <ClientOnly>
+          {{ isLoading ? 'Loading...' : userName || 'Guest' }}
+        </ClientOnly>
+      </span>
+      <ChevronDown class="h-4 w-4 text-gray-600" />
     </button>
-    
+
     <div
-      v-if="isOpen" 
-      @click="isOpen = false"
-      class="fixed inset-0 z-30"
-    ></div>
-    
-    <transition
-      enter-active-class="transition ease-out duration-100"
-      enter-from-class="transform opacity-0 scale-95"
-      enter-to-class="transform opacity-100 scale-100"
-      leave-active-class="transition ease-in duration-75"
-      leave-from-class="transform opacity-100 scale-100"
-      leave-to-class="transform opacity-0 scale-95"
+      v-if="isOpen"
+      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg overflow-hidden z-20"
     >
-      <div
-        v-if="isOpen"
-        class="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-card border z-40"
-      >
-        <div class="p-2 flex flex-col text-sm">
-          <div class="p-2 mb-1 border-b">
-            <div class="font-medium">Student User</div>
-            <div class="text-xs text-muted-foreground">student@technion.ac.il</div>
-          </div>
-          <a href="#" class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted transition-colors">
-            <User class="h-4 w-4" />
-            <span>Profile</span>
-          </a>
-          <a href="#" class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted transition-colors">
-            <Settings class="h-4 w-4" />
-            <span>Settings</span>
-          </a>
-          <a href="#" class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted transition-colors">
-            <HelpCircle class="h-4 w-4" />
-            <span>Help & Support</span>
-          </a>
-          <div class="border-t my-1"></div>
-          <a href="#" class="flex items-center gap-2 rounded px-2 py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
-            <LogOut class="h-4 w-4" />
-            <span>Log out</span>
-          </a>
+      <div class="py-2">
+        <div class="px-4 py-2 text-xs text-gray-500">
+          <ClientOnly>
+            <p v-if="isAuthenticated">Logged in as <span class="font-medium">{{ userName }}</span></p>
+            <p v-else>Not logged in</p>
+            <p v-if="userId" class="mt-1 truncate">ID: {{ userId }}</p>
+          </ClientOnly>
         </div>
+        <div class="border-t border-gray-100"></div>
+        
+        <!-- Debug page option - only visible in development mode -->
+        <NuxtLink
+          v-if="isDev"
+          to="/debug"
+          @click="isOpen = false"
+          class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+        >
+          <div class="flex items-center gap-2">
+            <Bug class="h-4 w-4" />
+            <span>Auth Debug</span>
+          </div>
+        </NuxtLink>
+        
+        <div v-if="isDev" class="border-t border-gray-100"></div>
+        
+        <template v-if="isAuthenticated">
+          <button
+            @click="handleLogout"
+            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+          >
+            <div class="flex items-center gap-2">
+              <LogOut class="h-4 w-4" />
+              <span>Log out</span>
+            </div>
+          </button>
+        </template>
+        <template v-else>
+          <button
+            @click="handleLogin"
+            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+          >
+            <div class="flex items-center gap-2">
+              <LogIn class="h-4 w-4" />
+              <span>Log in</span>
+            </div>
+          </button>
+        </template>
       </div>
-    </transition>
+    </div>
+    <div
+      v-if="isOpen"
+      class="fixed inset-0 z-10"
+      @click="isOpen = false"
+    ></div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue'
-import { ChevronDown, User, Settings, HelpCircle, LogOut } from 'lucide-vue-next'
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+import { ChevronDown, Bug, LogIn, LogOut } from 'lucide-vue-next'
+import { useAuth } from '~/composables/useAuth'
+import { useRuntimeConfig } from 'nuxt/app'
 
+// Check if we're in development mode using runtime config
+const config = useRuntimeConfig()
+const isDev = config.public.isDev || false
+
+// Local reactive state
 const isOpen = ref(false)
+const isLoading = ref(true)
 
-// When implementing GraphQL, you'll likely have a setup like this:
-/*
-const { result: userData } = useQuery(gql`
-  query GetUserProfile {
-    currentUser {
-      name
-      email
-      avatar
-      status
-    }
-  }
-`)
-*/
+// Local copies of auth state to prevent hydration mismatch
+// These will be updated on client side only
+const localUserName = ref('')
+const localUserId = ref('')
+const localIsAuthenticated = ref(false)
+
+const { login, logout, userName: authUserName, userId: authUserId, isAuthenticated: authIsAuthenticated } = useAuth()
+
+// Computed properties that use local state
+const userName = computed(() => localUserName.value)
+const userId = computed(() => localUserId.value)
+const isAuthenticated = computed(() => localIsAuthenticated.value)
+
+// Update local state from auth state with a slight delay to ensure client-side only
+onMounted(() => {
+  // Set a small delay to ensure Keycloak is fully initialized
+  setTimeout(() => {
+    localUserName.value = authUserName.value
+    localUserId.value = authUserId.value
+    localIsAuthenticated.value = authIsAuthenticated.value
+    isLoading.value = false
+    
+    // Set up a watcher to update local state if auth state changes
+    const checkAuthInterval = setInterval(() => {
+      localUserName.value = authUserName.value
+      localUserId.value = authUserId.value
+      localIsAuthenticated.value = authIsAuthenticated.value
+    }, 2000)
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(checkAuthInterval)
+  }, 500)
+})
+
+function toggleDropdown() {
+  isOpen.value = !isOpen.value
+}
+
+function handleLogin() {
+  isOpen.value = false
+  login()
+}
+
+function handleLogout() {
+  isOpen.value = false
+  logout()
+}
 </script> 
