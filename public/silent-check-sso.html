@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Silent SSO Check</title>
+  <script>
+    // This page is used for silent token refresh
+    // It must be in a separate domain or path that's registered with Keycloak
+    
+    // Send message to parent window with the current URL
+    // This URL will contain the token or error information
+    try {
+      parent.postMessage(location.href, location.origin);
+    } catch (error) {
+      console.error("Error in silent-check-sso.html:", error);
+    }
+  </script>
+</head>
+<body>
+  <!-- Silent SSO check page - used by Keycloak for background token refresh -->
+  <!-- This page should be blank - it's loaded in an invisible iframe -->
+</body>
+</html> 

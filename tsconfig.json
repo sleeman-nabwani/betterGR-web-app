@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "strict": true,
     "jsx": "preserve",
     "resolveJsonModule": true,
@@ -17,7 +17,8 @@
       "@/*": ["./*"]
     },
     "types": [
-      "node"
+      "@nuxt/types",
+      "@types/node"
     ]
   },
   "include": [
