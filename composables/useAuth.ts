@@ -1,4 +1,5 @@
 import { computed, ref, inject, getCurrentInstance } from 'vue'
+import { useNuxtApp } from 'nuxt/app'
 import type Keycloak from 'keycloak-js'
 
 /**
@@ -7,36 +8,44 @@ import type Keycloak from 'keycloak-js'
  * Provides simple reactive access to auth state and methods to login, logout, and refresh tokens
  */
 export function useAuth() {
-  // Inject Keycloak instance provided by the plugin
-  const keycloak = inject('keycloak') as Keycloak | undefined;
+  const nuxtApp = useNuxtApp()
+  
+  // Get Keycloak instance from the Nuxt app provided by the plugin
+  const keycloak = nuxtApp.$keycloak as Keycloak | undefined;
+  
+  // Fallback to Vue injection if not found in nuxtApp (for compatibility)
+  const injectedKeycloak = inject('keycloak') as Keycloak | undefined;
+  
+  // Use whichever instance is available
+  const kc = keycloak || injectedKeycloak;
   
   // Add debug for injection issues (only in development)
-  if (!keycloak && process.env.NODE_ENV === 'development') {
+  if (!kc && process.env.NODE_ENV === 'development') {
     console.warn('Keycloak injection not found in useAuth(). Check plugin configuration.');
   }
 
   // Reactive authentication state
-  const isAuthenticated = computed(() => keycloak?.authenticated ?? false)
+  const isAuthenticated = computed(() => kc?.authenticated ?? false)
   
   // User information from token
-  const userId = computed(() => keycloak?.idTokenParsed?.sub || '')
+  const userId = computed(() => kc?.idTokenParsed?.sub || '')
   const userName = computed(() => {
-    return keycloak?.idTokenParsed?.preferred_username || 
-           keycloak?.idTokenParsed?.name || 
+    return kc?.idTokenParsed?.preferred_username || 
+           kc?.idTokenParsed?.name || 
            ''
   })
   
   // Token access
-  const token = computed(() => keycloak?.token || '')
+  const token = computed(() => kc?.token || '')
 
   // Helper to check if we need to restore authentication after a refresh
   const checkAuthentication = () => {
-    if (!keycloak || keycloak.authenticated) {
+    if (!kc || kc.authenticated) {
       return; // Already authenticated or no keycloak instance
     }
       
     // Try to update the token (will use saved tokens automatically)
-    return keycloak.updateToken(10).catch(error => {
+    return kc.updateToken(10).catch(error => {
       console.warn('Failed to restore authentication after refresh:', error);
     });
   };
@@ -51,7 +60,7 @@ export function useAuth() {
    * Trigger login flow
    */
   const login = () => {
-    if (!keycloak) {
+    if (!kc) {
       console.error('Keycloak not initialized');
       alert('Login is unavailable. Keycloak is not properly initialized. Please check your configuration.');
       return Promise.reject(new Error('Keycloak not initialized'));
@@ -61,7 +70,7 @@ export function useAuth() {
     const redirectUri = window.location.origin;
     
     try {
-      return keycloak.login({
+      return kc.login({
         redirectUri,
         prompt: 'login', // Force login prompt even if already authenticated
       });
@@ -75,7 +84,7 @@ export function useAuth() {
    * Trigger logout flow
    */
   const logout = () => {
-    if (!keycloak) {
+    if (!kc) {
       console.error('Keycloak not initialized');
       return Promise.reject(new Error('Keycloak not initialized'));
     }
@@ -88,7 +97,7 @@ export function useAuth() {
     const redirectUri = `${window.location.origin}?logout=true`;
     
     try {
-      return keycloak.logout({
+      return kc.logout({
         redirectUri
       });
     } catch (error) {
@@ -102,18 +111,18 @@ export function useAuth() {
    * @param minValidity Minimum validity in seconds
    */
   const updateToken = async (minValidity = 10) => {
-    if (!keycloak) {
+    if (!kc) {
       console.error('Keycloak not initialized');
       return Promise.reject(new Error('Keycloak not initialized'));
     }
     
-    if (!keycloak.authenticated) {
+    if (!kc.authenticated) {
       console.warn('Cannot update token - not authenticated');
       return false;
     }
     
     try {
-      return await keycloak.updateToken(minValidity);
+      return await kc.updateToken(minValidity);
     } catch (error) {
       console.error('Failed to update token:', error);
       throw error;
@@ -124,7 +133,7 @@ export function useAuth() {
    * Force update of authentication state from Keycloak
    */
   const updateAuthState = () => {
-    if (!keycloak) {
+    if (!kc) {
       return {
         isAuthenticated: false,
         token: '',
@@ -136,10 +145,10 @@ export function useAuth() {
     // This is a simple wrapper around the internal state
     // Just to provide a consistent interface
     return {
-      isAuthenticated: keycloak.authenticated ?? false,
-      token: keycloak.token ?? '',
-      userId: keycloak.idTokenParsed?.sub ?? '',
-      userName: keycloak.idTokenParsed?.preferred_username || keycloak.idTokenParsed?.name || ''
+      isAuthenticated: kc.authenticated ?? false,
+      token: kc.token ?? '',
+      userId: kc.idTokenParsed?.sub ?? '',
+      userName: kc.idTokenParsed?.preferred_username || kc.idTokenParsed?.name || ''
     }
   }
 
@@ -149,22 +158,22 @@ export function useAuth() {
    * @param callback Function to call when event is fired
    */
   const onAuthEvent = (event: string, callback: Function) => {
-    if (!keycloak) {
+    if (!kc) {
       console.warn(`Cannot register event ${event} - Keycloak not initialized`);
       return () => {}; // Return empty unsubscribe function
     }
     
     // Map our simplified event names to Keycloak event handlers
     if (event === 'auth:success') {
-      const originalOnAuthSuccess = keycloak.onAuthSuccess || (() => {});
-      keycloak.onAuthSuccess = (...args) => {
-        originalOnAuthSuccess.apply(keycloak, args);
+      const originalOnAuthSuccess = kc.onAuthSuccess || (() => {});
+      kc.onAuthSuccess = (...args) => {
+        originalOnAuthSuccess.apply(kc, args);
         callback(...args);
       };
     } else if (event === 'auth:logout') {
-      const originalOnAuthLogout = keycloak.onAuthLogout || (() => {});
-      keycloak.onAuthLogout = (...args) => {
-        originalOnAuthLogout.apply(keycloak, args);
+      const originalOnAuthLogout = kc.onAuthLogout || (() => {});
+      kc.onAuthLogout = (...args) => {
+        originalOnAuthLogout.apply(kc, args);
         callback(...args);
       };
     }

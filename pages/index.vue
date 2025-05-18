@@ -16,6 +16,9 @@
       :upcoming-assignments="upcomingAssignments"
       :pending="pending"
       :upcoming="upcoming"
+      :loading-courses="loadingCourses"
+      :courses-error="coursesError"
+      @retry-courses="retryCourses"
     />
     
     <!-- Placeholder content when checking and not authenticated yet -->
@@ -51,8 +54,16 @@ const {
   filteredCourses,
   upcomingAssignments,
   pending,
-  upcoming
+  upcoming,
+  loadingCourses,
+  coursesError,
+  fetchCourses
 } = useDashboard()
+
+// Function to retry fetching courses
+const retryCourses = () => {
+  fetchCourses();
+};
 
 // Watch for authentication state changes
 watch(isAuthenticated, (newValue) => {

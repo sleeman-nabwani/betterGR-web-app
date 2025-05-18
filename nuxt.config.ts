@@ -43,14 +43,16 @@ export default defineNuxtConfig({
     public: {
       isDev,
       keycloak: keycloakConfig,
-      // Make the environment variables directly accessible by the same name
+      // GraphQL configuration
+      NUXT_PUBLIC_GRAPHQL_HOST: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
+      // Other variables
       NUXT_PUBLIC_KEYCLOAK_URL: process.env.NUXT_PUBLIC_KEYCLOAK_URL,
       NUXT_PUBLIC_KEYCLOAK_REALM: process.env.NUXT_PUBLIC_KEYCLOAK_REALM,
       NUXT_PUBLIC_KEYCLOAK_CLIENT_ID: process.env.NUXT_PUBLIC_KEYCLOAK_CLIENT_ID,
       // Keep the old ones for backward compatibility
-      keycloakUrl: process.env.NUXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8080',
-      keycloakRealm: process.env.NUXT_PUBLIC_KEYCLOAK_REALM || 'master',
-      keycloakClientId: process.env.NUXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'betterGR-web-app',
+      keycloakUrl: process.env.NUXT_PUBLIC_KEYCLOAK_URL,
+      keycloakRealm: process.env.NUXT_PUBLIC_KEYCLOAK_REALM,
+      keycloakClientId: process.env.NUXT_PUBLIC_KEYCLOAK_CLIENT_ID,
       content: {
         documentDriven: true,
         navigation: {
@@ -159,27 +161,38 @@ export default defineNuxtConfig({
     dirs: ['~/components']
   },
 
-  graphqlClient: {
+  'graphql-client': {
+    watch: true,
+    autoImport: true,
+    functionPrefix: 'Gql',
+    documentPaths: [],
+    preferGETQueries: false,
+    codegen: {
+      silent: false,
+      skipTypename: false,
+      useTypeImports: true,
+      dedupeFragments: true,
+      onlyOperationTypes: true,
+      disableOnBuild: false
+    },
     clients: {
       default: {
-        host: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
-        // Optional websocket endpoint if you need subscriptions
-        wsHost: process.env.NUXT_PUBLIC_GRAPHQL_WS_HOST,
-        retries: 3,
-        // Add token to GraphQL requests
-        tokenName: 'Authorization',
-        tokenType: 'Bearer',
-        tokenStorage: 'none', // Don't store in localStorage or cookies
+        host: process.env.NUXT_PUBLIC_GRAPHQL_HOST || 'http://localhost:1234/query',
+        introspectionURL: process.env.NUXT_PUBLIC_GRAPHQL_HOST || 'http://localhost:1234/query',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        token: {
+          type: 'Bearer',
+          name: 'Authorization',
+          value: ''
+        }
       }
-    },
-    options: {
-      persistedQueries: false,
-      cache: true,
-    },
+    }
   },
 
   plugins: [
+    // GraphQL functionality has been moved to composables
     '~/plugins/keycloak.client.ts',
-    '~/plugins/graphql-auth.client.ts',
   ],
 } as any)
