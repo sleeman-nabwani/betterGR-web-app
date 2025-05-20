@@ -134,28 +134,20 @@ import WelcomeBanner from '~/components/dashboard/WelcomeBanner.vue'
 import DashboardMetrics from '~/components/dashboard/DashboardMetrics.vue'
 
 // Import types from the dashboard composable
-import { Course, Assignment, Semester } from '~/composables/useDashboard'
+import { useDashboard } from '~/composables/useDashboard'
 
 // Define component props
-defineProps<{
-  // User information
-  username: string;
-  
-  // Semester data
-  currentSemester: Semester;
-  
-  // Course and assignment data
-  filteredCourses: Course[];
-  upcomingAssignments: Assignment[];
-  
-  // Dashboard metrics
-  pending: number;
-  upcoming: number;
-  
-  // Loading states
-  loadingCourses: boolean;
-  coursesError: Error | null;
-}>();
+const {
+  currentSemester,
+  filteredCourses,
+  upcomingAssignments,
+  pending,
+  upcoming,
+  loadingCourses,
+  coursesError,
+  username
+} = useDashboard()
+
 
 // Define events
 defineEmits(['retry-courses']);

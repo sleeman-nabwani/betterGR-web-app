@@ -1,6 +1,6 @@
 import { ref, Ref } from 'vue'
 import { useAuth } from './useAuth.js'
-import { useGraphQL } from './useGraphQL.js'
+import { useNuxtApp } from 'nuxt/app'
 
 /**
  * Types for GraphQL responses
@@ -45,12 +45,15 @@ export interface Course {
   [key: string]: any;
 }
 
+// Type for GqlFunction to fix linter errors
+type GqlFunction<T, V> = (variables: V) => Promise<{data?: T, error?: Error}>;
+
 /**
  * Composable for managing course data
  */
 export function useCourses() {
   const { userId } = useAuth()
-  const { executeQuery } = useGraphQL()
+  const nuxtApp = useNuxtApp()
   
   // State
   const courses: Ref<Course[]> = ref([])
@@ -70,15 +73,24 @@ export function useCourses() {
     error.value = null
 
     try {
-      // Execute the GraphQL query to get student courses
-      const data = await executeQuery<StudentCoursesResponse, { studentId: string }>(
-        'GqlStudentCourses',
-        { studentId: userId.value }
-      )
+      // Use the auto-generated GqlGetStudentCourses function directly
+      // Using type assertion to avoid TypeScript errors
+      const gqlGetStudentCourses = (nuxtApp as any).GqlGetStudentCourses as 
+        GqlFunction<StudentCoursesResponse, { studentId: string }>;
+      
+      if (!gqlGetStudentCourses) {
+        throw new Error('GqlGetStudentCourses function not available. Is nuxt-graphql-client configured properly?')
+      }
+      
+      const response = await gqlGetStudentCourses({ studentId: userId.value })
+      
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to fetch student courses')
+      }
       
       // Process the fetched courses
-      if (data.studentCourses) {
-        processCourses(data.studentCourses)
+      if (response.data?.studentCourses) {
+        processCourses(response.data.studentCourses)
       } else {
         console.warn('No student courses returned')
         courses.value = []

@@ -1,85 +1,46 @@
 import { useNuxtApp } from 'nuxt/app'
-import { useAuth } from './useAuth.js'
-
-// Define a type for the GraphQL client
-interface GraphQLClient {
-  [key: string]: any;
-}
 
 /**
- * Composable for handling GraphQL operations with authentication
+ * Composable for handling GraphQL operations using auto-generated Gql functions
+ * 
+ * This composable provides access to the GraphQL client directly using the 
+ * automatically generated Gql functions by the nuxt-graphql-client module.
  */
 export function useGraphQL() {
-  const { token, updateToken } = useAuth()
   const nuxtApp = useNuxtApp()
-
+  
   /**
-   * Get the authenticated GraphQL client
-   * @returns The configured GraphQL client
+   * Get the GraphQL client
+   * Uses the auto-generated global Gql functions from nuxt-graphql-client
    */
-  async function getClient(): Promise<GraphQLClient | null> {
-    // Skip if we're on the server
-    if (process.server) {
-      console.warn('GraphQL operations not available on server-side')
-      return null
-    }
-
-    try {
-      // Make sure we have a valid token
-      if (!token.value) {
-        try {
-          await updateToken(60)
-        } catch (err) {
-          console.error('Failed to update token for GraphQL request:', err)
-          throw new Error('Authentication token not available')
-        }
-      }
-      
-      // Get the GraphQL client from nuxt-graphql-client module
-      // For nuxt-graphql-client, we don't need to set headers manually 
-      // as it's configured in nuxt.config.ts
-      
-      // First, check if the client is available
-      if (!nuxtApp.$gql) {
-        throw new Error('GraphQL client not available')
-      }
-      
-      return nuxtApp.$gql as GraphQLClient
-    } catch (error) {
-      console.error('Error getting GraphQL client:', error)
-      throw error
-    }
-  }
-
+  const client = nuxtApp.$gql || {}
+  
   /**
    * Execute a GraphQL query with proper error handling
-   * @param queryFn The query function to execute
+   * 
+   * @deprecated This method is deprecated. Use the automatically generated GqlXxx functions directly.
+   * @param operationName The GraphQL operation name (e.g., 'GqlStudentCourses')
    * @param variables The variables to pass to the query
    * @returns The query result
    */
   async function executeQuery<T, V>(
-    queryFn: string, 
+    operationName: string, 
     variables: V
   ): Promise<T> {
     try {
-      const client = await getClient()
-      
-      if (!client) {
+      if (!nuxtApp.$gql) {
+        console.error('GraphQL client not available. Is nuxt-graphql-client configured properly?')
         throw new Error('GraphQL client not available')
       }
       
-      // With nuxt-graphql-client, we execute operations differently
-      // The client functions are directly available on the client object
-      if (!(queryFn in client)) {
-        throw new Error(`GraphQL operation '${queryFn}' not found`)
+      // Check if the operation exists on the nuxtApp
+      const gqlFunction = nuxtApp[operationName];
+      if (!gqlFunction || typeof gqlFunction !== 'function') {
+        throw new Error(`GraphQL operation '${operationName}' not found. Make sure to use the full name (e.g., 'GqlStudentCourses')`)
       }
 
-      // When using nuxt-graphql-client, the auth token is handled by the module configuration
-      const response = await client[queryFn](variables, {
-        headers: {
-          'Authorization': `Bearer ${token.value}`
-        }
-      })
+      // Execute the operation
+      const response = await gqlFunction(variables)
       
       if (response.error) {
         console.error('GraphQL error:', response.error)
@@ -94,7 +55,10 @@ export function useGraphQL() {
   }
 
   return {
-    getClient,
-    executeQuery
+    // Legacy method for backward compatibility
+    executeQuery,
+    
+    // Direct client access for advanced use cases
+    client
   }
 } 

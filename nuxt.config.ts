@@ -1,5 +1,6 @@
 import { defineNuxtConfig } from 'nuxt/config'
 import { NuxtConfig } from '@nuxt/types'
+import type Keycloak from 'keycloak-js'
 
 // Validate required environment variables
 const requiredEnvVars = [
@@ -36,7 +37,7 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
     typeCheck: false,
-    shim: false
+    shim: true
   },
 
   runtimeConfig: {
@@ -44,7 +45,7 @@ export default defineNuxtConfig({
       isDev,
       keycloak: keycloakConfig,
       // GraphQL configuration
-      NUXT_PUBLIC_GRAPHQL_HOST: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
+      GQL_HOST: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
       // Other variables
       NUXT_PUBLIC_KEYCLOAK_URL: process.env.NUXT_PUBLIC_KEYCLOAK_URL,
       NUXT_PUBLIC_KEYCLOAK_REALM: process.env.NUXT_PUBLIC_KEYCLOAK_REALM,
@@ -161,38 +162,22 @@ export default defineNuxtConfig({
     dirs: ['~/components']
   },
 
-  'graphql-client': {
-    watch: true,
-    autoImport: true,
-    functionPrefix: 'Gql',
-    documentPaths: [],
-    preferGETQueries: false,
-    codegen: {
-      silent: false,
-      skipTypename: false,
-      useTypeImports: true,
-      dedupeFragments: true,
-      onlyOperationTypes: true,
-      disableOnBuild: false
-    },
+  'graphql-client':{
     clients: {
       default: {
-        host: process.env.NUXT_PUBLIC_GRAPHQL_HOST || 'http://localhost:1234/query',
-        introspectionURL: process.env.NUXT_PUBLIC_GRAPHQL_HOST || 'http://localhost:1234/query',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        host: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
+        introspectionHost: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
         token: {
           type: 'Bearer',
           name: 'Authorization',
-          value: ''
-        }
+          value: (nuxtApp: any) => (nuxtApp.$keycloak as Keycloak).token
+        },
+        retainToken: true
       }
     }
   },
 
   plugins: [
-    // GraphQL functionality has been moved to composables
     '~/plugins/keycloak.client.ts',
   ],
 } as any)
