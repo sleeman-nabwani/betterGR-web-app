@@ -1,149 +1,118 @@
 import { ref, Ref } from 'vue'
 import { useAuth } from './useAuth.js'
-import { useNuxtApp } from 'nuxt/app'
-
-/**
- * Types for GraphQL responses
- */
-interface GraphQLCourse {
-  id: string;
-  name: string;
-  semester: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  staff?: Array<{ id: string; firstName: string; lastName: string }>;
-  students?: Array<{ id: string; firstName: string; lastName: string }>;
-  homework?: Array<{ id: string; title: string; dueDate: string }>;
-  announcements?: any[];
-  grades?: any[];
-}
-
-interface StudentCoursesResponse {
-  studentCourses: GraphQLCourse[];
-}
+import { useGraphQL } from './useGraphQL.js'
 
 /**
  * Course data model
  */
 export interface Course {
   id: string;
+  name: string;
   title: string;
   code: string;
-  slug: string;
-  semesterId: string;
-  name: string;
   semester: string;
+  semesterId: string;
+  slug: string;
   description?: string;
-  createdAt: string;
-  updatedAt: string;
-  staff: any[];
-  students: any[];
-  announcements: any[];
-  homework: any[];
-  grades: any[];
-  [key: string]: any;
 }
 
-// Type for GqlFunction to fix linter errors
-type GqlFunction<T, V> = (variables: V) => Promise<{data?: T, error?: Error}>;
+/**
+ * Convert course name to URL-friendly slug
+ */
+function createSlugFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .replace(/-+/g, '_') // Replace hyphens with underscores
+    .replace(/_+/g, '_') // Replace multiple underscores with single underscore
+    .replace(/^_|_$/g, '') // Remove leading/trailing underscores
+}
 
 /**
- * Composable for managing course data
+ * Create semester ID from semester name
+ */
+function createSemesterIdFromName(semester: string): string {
+  return semester
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s]/g, '') // Remove special characters except spaces
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+}
+
+/**
+ * Course data composable
  */
 export function useCourses() {
-  const { userId } = useAuth()
-  const nuxtApp = useNuxtApp()
+  const { userId, isAuthenticated } = useAuth()
+  const { getCourses, loading: graphqlLoading } = useGraphQL()
   
   // State
   const courses: Ref<Course[]> = ref([])
   const loading = ref(false)
   const error = ref<Error | null>(null)
-
+  
   /**
-   * Fetch courses for the authenticated user
+   * Fetch courses for the current user
    */
   async function fetchCourses() {
-    if (!userId.value) {
-      console.warn('Cannot fetch courses: User not authenticated')
+    if (!isAuthenticated.value || !userId.value) {
+      error.value = new Error('User not authenticated')
       return
     }
-
+    
     loading.value = true
     error.value = null
-
+    
     try {
-      // Use the auto-generated GqlGetStudentCourses function directly
-      // Using type assertion to avoid TypeScript errors
-      const gqlGetStudentCourses = (nuxtApp as any).GqlGetStudentCourses as 
-        GqlFunction<StudentCoursesResponse, { studentId: string }>;
+      // Get courses from the GraphQL API
+      const data = await getCourses(userId.value)
       
-      if (!gqlGetStudentCourses) {
-        throw new Error('GqlGetStudentCourses function not available. Is nuxt-graphql-client configured properly?')
+      if (!data || !Array.isArray(data)) {
+        throw new Error('Invalid response from server')
       }
       
-      const response = await gqlGetStudentCourses({ studentId: userId.value })
+      // Process the data to match our Course interface
+      // Map GraphQL response fields to expected UI fields
+      courses.value = data.map((course: any) => {
+        const courseName = course.name || 'Untitled Course'
+        const semesterName = course.semester || 'Unknown Semester'
+        
+        return {
+          id: course.id || '',
+          name: courseName,
+          title: courseName, // Map name to title for UI compatibility
+          semester: semesterName,
+          semesterId: createSemesterIdFromName(semesterName), // Create proper semester ID
+          description: course.description || '',
+          code: course.id || '', // Use just the course ID as the code
+          slug: createSlugFromName(courseName) // Create URL-friendly slug from course name
+        }
+      })
       
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to fetch student courses')
-      }
-      
-      // Process the fetched courses
-      if (response.data?.studentCourses) {
-        processCourses(response.data.studentCourses)
-      } else {
-        console.warn('No student courses returned')
-        courses.value = []
-      }
     } catch (err) {
       console.error('Error fetching courses:', err)
-      error.value = err as Error
-      courses.value = []
+      error.value = err instanceof Error ? err : new Error(String(err))
+      courses.value = [] // Clear courses on error
     } finally {
       loading.value = false
     }
   }
-
-  /**
-   * Process and transform course data
-   */
-  function processCourses(studentCourses: GraphQLCourse[]) {
-    const fetchedCourses = studentCourses.map((course: GraphQLCourse) => {
-      return {
-        id: course.id,
-        title: course.name,
-        name: course.name,
-        code: `COURSE-${course.id}`,
-        semester: course.semester,
-        semesterId: course.semester?.toLowerCase().replace(/\s+/g, '') || 'current',
-        slug: course.id,
-        description: course.description || '',
-        createdAt: course.createdAt,
-        updatedAt: course.updatedAt,
-        staff: course.staff || [],
-        students: course.students || [],
-        announcements: course.announcements || [],
-        homework: course.homework || [],
-        grades: course.grades || []
-      };
-    });
-    
-    courses.value = fetchedCourses
-    console.log('Loaded courses:', fetchedCourses)
-  }
-
+  
   /**
    * Find a course by ID
    */
   function findCourseById(id: string): Course | undefined {
     return courses.value.find(course => course.id === id)
   }
-
+  
   return {
     courses,
     loading,
     error,
     fetchCourses,
-    findCourseById
+    findCourseById,
+    isAuthenticated
   }
 } 

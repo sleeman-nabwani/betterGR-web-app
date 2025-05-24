@@ -165,12 +165,45 @@ export default defineNuxtConfig({
   'graphql-client':{
     clients: {
       default: {
-        host: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
+        host: '/api/graphql',
         introspectionHost: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
         token: {
           type: 'Bearer',
           name: 'Authorization',
-          value: (nuxtApp: any) => (nuxtApp.$keycloak as Keycloak).token
+          value: (nuxtApp: any) => {
+            // Add robust token handling with debug information
+            try {
+              // Get Keycloak instance from the Nuxt app
+              const keycloak = nuxtApp?.$keycloak
+              
+              // Check if Keycloak exists and is authenticated
+              if (!keycloak) {
+                console.warn('[GraphQL] No Keycloak instance found')
+                return ''
+              }
+              
+              if (!keycloak.authenticated) {
+                console.warn('[GraphQL] Keycloak not authenticated')
+                return ''
+              }
+              
+              // Only return the token if it exists
+              if (keycloak.token) {
+                // Only log a truncated token in development
+                if (process.env.NODE_ENV === 'development') {
+                  const truncToken = keycloak.token.substring(0, 15) + '...'
+                  console.log(`[GraphQL] Using token: ${truncToken}`)
+                }
+                return keycloak.token
+              } else {
+                console.warn('[GraphQL] Token is empty or undefined')
+                return ''
+              }
+            } catch (error) {
+              console.error('[GraphQL] Error getting token:', error)
+              return ''
+            }
+          }
         },
         retainToken: true
       }

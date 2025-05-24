@@ -1,4 +1,4 @@
-import { computed, ref, inject, getCurrentInstance, onMounted } from 'vue'
+import { computed, ref, inject, getCurrentInstance } from 'vue'
 import { useNuxtApp } from 'nuxt/app'
 import type Keycloak from 'keycloak-js'
 
@@ -20,8 +20,8 @@ export function useAuth() {
   // Access Keycloak instance
   let kc: Keycloak | undefined
   
-  // Initialize in onMounted to ensure client-side execution
-  onMounted(() => {
+  // Initialize immediately if we're on client-side
+  if (process.client) {
     // Get Keycloak instance from the Nuxt app provided by the plugin
     kc = nuxtApp.$keycloak as Keycloak | undefined
     
@@ -33,15 +33,17 @@ export function useAuth() {
     // Add debug for injection issues (only in development)
     if (!kc && process.env.NODE_ENV === 'development') {
       console.warn('Keycloak injection not found in useAuth(). Check plugin configuration.')
-      return
-    }
-    
-    // Update reactive state based on Keycloak instance
-    if (kc) {
+    } else if (kc) {
+      // Update reactive state based on Keycloak instance
       updateReactiveState()
       isInitialized.value = true
     }
-  })
+  
+    // If we're in a browser context, try to restore auth
+    setTimeout(() => {
+      checkAuthentication()
+    }, 500)
+  }
   
   // Update all the reactive state from the Keycloak instance
   function updateReactiveState() {
@@ -82,14 +84,6 @@ export function useAuth() {
       })
   }
   
-  // If we're in a browser context, try to restore auth
-  if (typeof window !== 'undefined') {
-    // Set a small delay to allow Keycloak to fully initialize
-    setTimeout(() => {
-      checkAuthentication()
-    }, 500)
-  }
-
   /**
    * Trigger login flow
    */
@@ -240,6 +234,74 @@ export function useAuth() {
     updateToken,
     updateAuthState,
     checkAuthentication,
-    onAuthEvent
+    onAuthEvent,
+    
+    // Debug helper method
+    debug: () => {
+      const isDev = process.env.NODE_ENV === 'development'
+      if (!isDev) {
+        console.warn('Auth debugging is only available in development mode')
+        return null
+      }
+      
+      try {
+        console.group('🔑 Auth Debug Information')
+        console.log('Keycloak instance exists:', !!kc)
+        console.log('Initialized:', isInitialized.value)
+        console.log('Authenticated:', authenticated.value)
+        
+        if (kc) {
+          console.log('KC Authenticated:', kc.authenticated)
+          console.log('KC Token exists:', !!kc.token)
+          
+          if (kc.token) {
+            const tokenPreview = kc.token.substring(0, 20) + '...'
+            console.log('Token preview:', tokenPreview)
+            
+            try {
+              // Decode the JWT token parts without validation
+              const parts = kc.token.split('.')
+              if (parts.length === 3) {
+                const header = JSON.parse(atob(parts[0]))
+                const payload = JSON.parse(atob(parts[1]))
+                
+                console.log('Token header:', header)
+                console.log('Token payload:', {
+                  sub: payload.sub,
+                  exp: new Date(payload.exp * 1000).toLocaleString(),
+                  iat: new Date(payload.iat * 1000).toLocaleString(),
+                  expiresIn: Math.floor((payload.exp * 1000 - Date.now()) / 1000) + ' seconds'
+                })
+              }
+            } catch (e) {
+              console.warn('Error decoding token', e)
+            }
+          }
+        }
+        
+        // Check storage
+        const localStorageToken = localStorage.getItem('kc_token')
+        const sessionStorageToken = sessionStorage.getItem('kc_token')
+        console.log('Token in localStorage:', !!localStorageToken)
+        console.log('Token in sessionStorage:', !!sessionStorageToken)
+        
+        console.groupEnd()
+        
+        // Return diagnostic info that could be useful for debugging
+        return {
+          hasKeycloak: !!kc,
+          initialized: isInitialized.value,
+          authenticated: authenticated.value,
+          kcAuthenticated: kc?.authenticated,
+          hasToken: !!kc?.token,
+          tokenInLocalStorage: !!localStorageToken,
+          tokenInSessionStorage: !!sessionStorageToken
+        }
+      } catch (error) {
+        console.error('Error in auth debug:', error)
+        console.groupEnd()
+        return null
+      }
+    }
   }
 }

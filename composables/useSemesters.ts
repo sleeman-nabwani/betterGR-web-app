@@ -1,4 +1,4 @@
-import { ref, Ref, computed } from 'vue'
+import { ref, Ref, computed, watch } from 'vue'
 import { useCourses } from './useCourses.js'
 
 /**
@@ -19,8 +19,8 @@ export function useSemesters() {
   // State
   const semesters: Ref<Semester[]> = ref([])
   const currentSemester = ref<Semester>({
-    id: 'current',
-    name: 'Current Semester'
+    id: 'all',
+    name: 'All Semesters'
   })
 
   /**
@@ -29,8 +29,11 @@ export function useSemesters() {
   const extractSemesters = computed(() => {
     const semesterMap = new Map<string, Semester>()
     
-    // Always include the current semester
-    semesterMap.set(currentSemester.value.id, currentSemester.value)
+    // Always include "All Semesters" option
+    semesterMap.set('all', {
+      id: 'all',
+      name: 'All Semesters'
+    })
     
     // Extract semesters from courses
     courses.value.forEach(course => {
@@ -57,7 +60,17 @@ export function useSemesters() {
 
   // Update semesters when computed value changes
   function updateSemesters() {
-    semesters.value = extractSemesters.value
+    const newSemesters = extractSemesters.value
+    semesters.value = newSemesters
+    
+    // Auto-select the first actual semester (not "All Semesters") if available
+    // and current semester is still "All Semesters"
+    if (currentSemester.value.id === 'all' && newSemesters.length > 1) {
+      const firstActualSemester = newSemesters.find(s => s.id !== 'all')
+      if (firstActualSemester) {
+        currentSemester.value = firstActualSemester
+      }
+    }
   }
 
   return {
