@@ -1,9 +1,9 @@
 ---
 title: Deep Learning
 courseMeta:
-  code: CS236781
+  code: 236781
   instructor: Dr. Alan Turing
-  semester: Spring 2025
+  semester: Winter 2025
   credits: 4
   # Use auto-generated kebab-case IDs
   sections:
@@ -78,4 +78,4 @@ Students will learn the theoretical foundations and practical applications of de
 - PyTorch Deep Learning with Python by Eli Stevens
 - Course Jupyter notebooks and Google Colab tutorials
 - Papers With Code for latest research
-- Kaggle competitions for practical experience
+- Kaggle competitions for practical experience 

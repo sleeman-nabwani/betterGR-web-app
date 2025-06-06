@@ -77,18 +77,10 @@ export function useDashboard() {
 
   // Handle redirects after successful authentication
   function handlePostLoginRedirect(): void {
-    // Check if we have a stored redirect path
-    const redirectPath = sessionStorage.getItem('login_redirect_path')
-    if (redirectPath && isAuthenticated.value) {
-      // Remove the stored path
-      sessionStorage.removeItem('login_redirect_path')
-      
-      // Only redirect if not already on that path
-      if (route.fullPath !== redirectPath) {
-        console.log('Redirecting to stored path after login:', redirectPath)
-        router.push(redirectPath)
-      }
-    }
+    // Redirect to stored path after login, or to index page as default
+    const redirectPath = sessionStorage?.getItem('login_redirect_path') || '/'
+    sessionStorage?.removeItem('login_redirect_path')
+    router.replace(redirectPath)
   }
 
   // Check authentication status in the background
@@ -110,14 +102,8 @@ export function useDashboard() {
       try {
         await auth.updateToken(60)
       } catch (err) {
-        console.warn('Token update failed:', err)
+        // Token update failed - handled by auth system
       }
-      
-      console.log('Auth check complete:', {
-        isAuthenticated: isAuthenticated.value,
-        username: username.value,
-        hasToken: !!auth.token.value
-      })
       
       // Handle any redirect after successful login
       if (isAuthenticated.value) {
@@ -152,7 +138,6 @@ export function useDashboard() {
     
     // Intentional logout or logout parameter
     if (urlParams.has('logout') || intentionalLogout) {
-      console.log('User was logged out:', intentionalLogout ? 'intentionally' : 'session expired')
       sessionStorage.removeItem('intentional_logout')
       return true
     }
@@ -191,7 +176,6 @@ export function useDashboard() {
     // Watch for auth changes and fetch courses when user signs in
     watch(isAuthenticated, (newValue: boolean) => {
       if (newValue && userId.value) {
-        console.log('User authenticated, fetching courses...')
         fetchCourses()
       } else {
         // Clear courses when user logs out

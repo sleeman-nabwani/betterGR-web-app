@@ -4,7 +4,7 @@ import { useNuxtApp } from 'nuxt/app'
 import type Keycloak from 'keycloak-js'
 
 /**
- * Simple GraphQL client with Keycloak authentication
+ * GraphQL client with Keycloak authentication
  */
 export function useGraphQL() {
   const { token, isAuthenticated, updateToken } = useAuth()
@@ -120,11 +120,8 @@ export function useGraphQL() {
    * Fetch student courses
    */
   async function getCourses(studentId: string) {
-    // Use a try/catch block to provide more specific error info
     try {
-      // Check authentication
       if (!isAuthenticated.value) {
-        console.warn('User not authenticated, cannot fetch courses')
         return []
       }
       
@@ -141,35 +138,7 @@ export function useGraphQL() {
       
       return data?.studentCourses || []
     } catch (err) {
-      // Log with more context
       console.error('Error fetching courses:', err)
-      
-      // In development, return mock data to help with UI development
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using mock course data in development')
-        const mockData = [
-          {
-            id: 'mock1',
-            name: 'Introduction to Programming',
-            semester: 'Fall 2023',
-            description: 'Learn the basics of programming with Python'
-          },
-          {
-            id: 'mock2',
-            name: 'Data Structures and Algorithms',
-            semester: 'Spring 2024',
-            description: 'Advanced data structures and algorithmic thinking'
-          },
-          {
-            id: 'mock3',
-            name: 'Deep Learning',
-            semester: 'Fall 2024',
-            description: 'Neural networks and deep learning fundamentals'
-          }
-        ]
-        return mockData
-      }
-      
       return []
     }
   }

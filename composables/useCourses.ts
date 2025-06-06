@@ -18,16 +18,16 @@ export interface Course {
 
 /**
  * Convert course name to URL-friendly slug
+ * This should match the naming convention used in content/courses/ directory
  */
 function createSlugFromName(name: string): string {
   return name
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
-    .replace(/\s+/g, '_') // Replace spaces with underscores
-    .replace(/-+/g, '_') // Replace hyphens with underscores
-    .replace(/_+/g, '_') // Replace multiple underscores with single underscore
-    .replace(/^_|_$/g, '') // Remove leading/trailing underscores
+    .replace(/[\s_]+/g, '-') // Replace spaces and underscores with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
 }
 
 /**
