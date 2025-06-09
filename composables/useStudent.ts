@@ -13,7 +13,7 @@ export interface Student {
 }
 
 export function useStudent() {
-    const { userId, isAuthenticated } = useAuth()
+    const { userId, isAuthenticated, userName } = useAuth()
     const { getStudent, updateStudent, loading: graphqlLoading } = useGraphQL()
     
     // State
@@ -22,63 +22,102 @@ export function useStudent() {
     const error = ref<Error | null>(null)
     
     /**
+     * Get display name from available data sources
+     */
+    function getDisplayName(): string {
+        // Priority: student data > Keycloak userName > fallback
+        if (student.value?.firstName && student.value?.lastName) {
+            return `${student.value.firstName} ${student.value.lastName}`
+        }
+        
+        if (userName.value) {
+            return userName.value
+        }
+        
+        return 'Student'
+    }
+    
+    /**
+     * Get first name from available data sources
+     */
+    function getFirstName(): string {
+        // Priority: student data > extract from Keycloak userName > fallback
+        if (student.value?.firstName) {
+            return student.value.firstName
+        }
+        
+        if (userName.value) {
+            // Try to extract first name from full name
+            const parts = userName.value.split(' ')
+            return parts[0] || userName.value
+        }
+        
+        return 'Student'
+    }
+    
+    /**
      * Fetch student data for the current user
      */
     async function fetchStudent() {
-        console.log('useStudent: fetchStudent called')
-        console.log('useStudent: isAuthenticated:', isAuthenticated.value)
-        console.log('useStudent: userId:', userId.value)
-        
         if (!isAuthenticated.value || !userId.value) {
-            console.log('useStudent: User not authenticated or no userId')
             error.value = new Error('User not authenticated')
-            return
+            return null
         }
         
         loading.value = true
         error.value = null
         
         try {
-            console.log('useStudent: Calling getStudent with userId:', userId.value)
             // Get student from the GraphQL API
             const data = await getStudent(userId.value)
-            console.log('useStudent: GraphQL response:', data)
             
-            // Set the student value
-            student.value = {
-                id: data.id || '',
-                firstName: data.firstName || '',
-                lastName: data.lastName || '',
-                email: data.email || '',
-                phoneNumber: data.phoneNumber || '',
-                createdAt: data.createdAt,
-                updatedAt: data.updatedAt
+            if (data && data.id) {
+                // Set the student value
+                student.value = {
+                    id: data.id || '',
+                    firstName: data.firstName || '',
+                    lastName: data.lastName || '',
+                    email: data.email || '',
+                    phoneNumber: data.phoneNumber || '',
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt
+                }
+                
+                return student.value
+            } else {
+                // Create a minimal student object from available auth data
+                student.value = {
+                    id: userId.value,
+                    firstName: getFirstName(),
+                    lastName: '',
+                    email: '',
+                    phoneNumber: '',
+                }
+                return student.value
             }
-            
-            console.log('useStudent: Student object created:', student.value)
-            return student.value
             
         } catch (err) {
-            console.error('Error fetching student:', err)
-            
-            // Add more detailed error logging for GraphQL errors
-            if (err && typeof err === 'object' && 'gqlErrors' in err) {
-                const gqlErrors = (err as any).gqlErrors
-                console.error('GraphQL errors:', gqlErrors)
-                if (Array.isArray(gqlErrors) && gqlErrors.length > 0) {
-                    console.error('First GraphQL error:', gqlErrors[0])
-                }
+            // Create a fallback student object even on error
+            student.value = {
+                id: userId.value,
+                firstName: getFirstName(),
+                lastName: '',
+                email: '',
+                phoneNumber: '',
             }
             
+            // Set error but don't clear student data
             error.value = err instanceof Error ? err : new Error(String(err))
-            student.value = null // Clear student on error
-            return null
+            return student.value
+            
         } finally {
             loading.value = false
         }
     }
 
-    //update student
+    /**
+     * Update student data
+     */
     async function updateStudentReq(id: string, input: any) {
         if (!isAuthenticated.value || !userId.value) {
             error.value = new Error('User not authenticated')
@@ -88,18 +127,32 @@ export function useStudent() {
         error.value = null
         try {
             const data = await updateStudent(id, input)
-            return data.updateStudent
+            
+            // Update local student data
+            if (data && student.value) {
+                student.value = {
+                    ...student.value,
+                    ...data,
+                }
+            }
+            
+            return data
         } catch (err) {
-            console.error('Error updating student:', err)
             error.value = err instanceof Error ? err : new Error(String(err))
+            throw err
+        } finally {
+            loading.value = false
         }
     }
+    
     return {
         student,
         loading,
         error,
         fetchStudent,
-        updateStudentReq
+        updateStudentReq,
+        getDisplayName,
+        getFirstName
     }
 }
 

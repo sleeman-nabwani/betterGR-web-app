@@ -206,6 +206,38 @@ export function useGraphQL() {
       return data.announcementsByCourse || []
     }, 'GetAnnouncementsByCourse', [])
   }
+
+  /**
+   * Send chat message with history
+   */
+  async function sendChatMessage(input: {
+    newMessage: string
+    chatHistory: Array<{ role: string; content: string }>
+    context: {
+      userId: string
+      userRole: string
+      courseId?: string
+      sessionId: string
+      userName?: string
+      isAuthenticated?: boolean
+    }
+  }) {
+    return withAuth(async () => {
+      try {
+        // @ts-ignore - Global function available after GraphQL code generation
+        const data = await GqlSendChatMessage({ input })
+        return data.sendChatWithHistory
+      } catch (error: any) {
+        // Handle case where backend doesn't have chat mutation implemented yet
+        if (error?.message?.includes('Cannot query field') || 
+            error?.message?.includes('sendChatWithHistory') ||
+            error?.gqlErrors?.[0]?.message?.includes('Cannot query field')) {
+          throw new Error('Chat functionality is not yet implemented on the backend. The frontend is ready!')
+        }
+        throw error
+      }
+    }, 'sendChatMessage')
+  }
   
   
   return {
@@ -231,6 +263,9 @@ export function useGraphQL() {
     // Homework operations
     getHomeworkByCourse,
     createHomework,
+    
+    // Chat operations
+    sendChatMessage,
     
     // Utility functions
     refreshTokenIfNeeded

@@ -8,17 +8,10 @@
         <p class="text-muted-foreground">
           Current semester: {{ semesterName }}
         </p>
-        <!-- Debug info during development -->
-        <div v-if="loading" class="text-xs text-muted-foreground">
-          Loading student data...
-        </div>
-        <div v-if="error" class="text-xs text-red-500">
-          Error: {{ error.message }}
-        </div>
       </div>
       <div class="hidden md:block">
         <div class="text-primary h-16 w-16 flex items-center justify-center text-2xl font-bold">
-          T
+          {{ studentInitial }}
         </div>
       </div>
     </div>
@@ -36,16 +29,20 @@ interface Props {
 const props = defineProps<Props>()
 
 // Get student data
-const { student, loading, error, fetchStudent } = useStudent()
+const { student, loading, error, fetchStudent, getDisplayName, getFirstName } = useStudent()
 
-// Computed property for student display name
+// Computed property for student display name using the improved fallback logic
 const studentDisplayName = computed(() => {
   if (loading.value) return 'Loading...'
-  if (error.value) return 'Student'
-  if (student.value) {
-    return `${student.value.firstName} ${student.value.lastName}`
-  }
-  return 'Student'
+  
+  // Use the getDisplayName function which handles fallbacks
+  return getDisplayName()
+})
+
+// Computed property for student initial
+const studentInitial = computed(() => {
+  const firstName = getFirstName()
+  return firstName.charAt(0).toUpperCase() || 'S'
 })
 
 // Fetch student data when component mounts
@@ -53,7 +50,7 @@ onMounted(async () => {
   try {
     await fetchStudent()
   } catch (err) {
-    console.error('WelcomeBanner: Error fetching student:', err)
+    // Silently handle errors since we have fallback mechanism
   }
 })
 </script>
