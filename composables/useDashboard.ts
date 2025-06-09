@@ -4,6 +4,8 @@ import { useAuth } from './useAuth.js'
 import { useCourses } from './useCourses.js'
 import { useAssignments } from './useAssignments.js'
 import { useSemesters } from './useSemesters.js'
+import { useAnnouncements } from './useAnnouncements.js'
+import { useStudent } from './useStudent.js'
 
 /**
  * Main dashboard composable that orchestrates the dashboard functionality
@@ -22,6 +24,15 @@ export function useDashboard() {
   const isAuthenticated = computed(() => auth.isAuthenticated.value)
   const username = computed(() => auth.userName.value)
   const userId = computed(() => auth.userId.value)
+
+  const{
+    student,
+    loading: loadingStudent,
+    error: studentError,
+    fetchStudent,
+    updateStudentReq
+  } = useStudent()
+  
   
   // Get semester management
   const { currentSemester, semesters, updateSemesters } = useSemesters()
@@ -42,6 +53,15 @@ export function useDashboard() {
     updateAssignments
   } = useAssignments(computed(() => currentSemester.value.id))
   
+  // Get announcements management
+  const {
+    recentAnnouncements,
+    loading: loadingAnnouncements,
+    error: announcementsError,
+    fetchRecentAnnouncementsFromCourses,
+    clearAnnouncements
+  } = useAnnouncements()
+
   //-------------------------------------------------------
   // DATA FILTERING & COMPUTED PROPERTIES
   //-------------------------------------------------------
@@ -173,13 +193,21 @@ export function useDashboard() {
       updateAssignments()
     })
     
+    // Watch for filtered courses to update announcements
+    watch(filteredCourses, (newCourses) => {
+      if (filteredCourses.value.length > 0) {
+        fetchRecentAnnouncementsFromCourses(filteredCourses.value)
+      }
+    }, { immediate: true })
+    
     // Watch for auth changes and fetch courses when user signs in
     watch(isAuthenticated, (newValue: boolean) => {
       if (newValue && userId.value) {
         fetchCourses()
       } else {
-        // Clear courses when user logs out
+        // Clear courses and announcements when user logs out
         courses.value = []
+        clearAnnouncements()
       }
     }, { immediate: true })
   }
@@ -224,8 +252,20 @@ export function useDashboard() {
     pending,
     upcoming,
     
+    // Announcements
+    recentAnnouncements,
+    loadingAnnouncements,
+    announcementsError,
+
+    //student
+    student,
+    loadingStudent,
+    studentError,
+    
     // Helpers
     handlePostLoginRedirect,
+    fetchStudent,
+    updateStudentReq,
     fetchCourses
   }
 } 

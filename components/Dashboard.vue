@@ -3,7 +3,6 @@
     <!-- Header Section -->
     <WelcomeBanner 
       :semester-name="currentSemester.name" 
-      :user-name="username"
     />
     
     <!-- Dashboard Metrics Overview -->
@@ -14,6 +13,11 @@
         :upcoming-deadlines="upcoming"
       />
     </div>
+
+    <!-- Recent Announcements Section -->
+    <section class="mb-8">
+      <RecentAnnouncements :filtered-courses="filteredCourses" />
+    </section>
     
     <!-- Upcoming Assignments Section -->
     <section class="mb-8">
@@ -132,22 +136,20 @@
 import { BookOpen } from 'lucide-vue-next'
 import WelcomeBanner from '~/components/dashboard/WelcomeBanner.vue'
 import DashboardMetrics from '~/components/dashboard/DashboardMetrics.vue'
-
-// Import types from the dashboard composable
-import { useDashboard } from '~/composables/useDashboard'
+import RecentAnnouncements from '~/components/dashboard/RecentAnnouncements.vue'
 
 // Define component props
-const {
-  currentSemester,
-  filteredCourses,
-  upcomingAssignments,
-  pending,
-  upcoming,
-  loadingCourses,
-  coursesError,
-  username
-} = useDashboard()
+interface Props {
+  currentSemester: any
+  filteredCourses: any[]
+  upcomingAssignments: any[]
+  pending: number
+  upcoming: number
+  loadingCourses: boolean
+  coursesError: Error | null
+}
 
+const props = defineProps<Props>()
 
 // Define events
 defineEmits(['retry-courses']);

@@ -34,6 +34,11 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
   ],
 
+  // Auto-imports configuration
+  imports: {
+    autoImport: true,
+  },
+
   typescript: {
     strict: true,
     typeCheck: false,

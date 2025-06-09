@@ -151,6 +151,18 @@ export function useGraphQL() {
     }, 'createCourse')
   }
 
+
+  /**
+   * Get student information
+   */
+  async function getStudent(studentId: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetStudent({ id: studentId })
+      return data.student
+    }, 'getStudent')
+  }
+
   /**
    * Update student information
    */
@@ -213,6 +225,7 @@ export function useGraphQL() {
     GetAnnouncementsByCourse,
     
     // Student operations
+    getStudent,
     updateStudent,
     
     // Homework operations

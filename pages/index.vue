@@ -61,10 +61,10 @@ const router = useRouter()
 const route = useRoute()
 
 // Use the dashboard composable
-const { 
-  checking, 
-  isAuthenticated, 
-  username, 
+const {
+  checking,
+  isAuthenticated,
+  username,
   login,
   currentSemester,
   filteredCourses,
