@@ -7,6 +7,9 @@
           View and track your academic performance for {{ currentSemester.name }}
         </p>
       </div>
+      <div class="flex items-center">
+        <SemesterSelector />
+      </div>
     </div>
 
     <div class="space-y-8">
@@ -69,10 +72,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Bookmark, Calendar, User, Check, X } from 'lucide-vue-next'
-import { useSemester } from '~/composables/useSemester'
+import { useSemesters } from '~/composables/useSemesters'
+import SemesterSelector from '~/components/SemesterSelector.vue'
 
 // Get semester data from our composable
-const { currentSemester, filterBySemester } = useSemester()
+const { currentSemester } = useSemesters()
+
+// Filter function to match the old API
+const filterBySemester = <T extends { semesterId: string }>(items: T[]): T[] => {
+  // If "All Semesters" is selected, return all items
+  if (currentSemester.value.id === 'all') {
+    return items
+  }
+  // Otherwise filter by the selected semester
+  return items.filter(item => item.semesterId === currentSemester.value.id)
+}
 
 // This will be replaced with real data from the API
 const courses = [

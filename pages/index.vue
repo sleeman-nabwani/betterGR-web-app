@@ -9,18 +9,32 @@
       />
 
       <!-- Main Content - Only Show When Authenticated -->
-      <Dashboard 
-        v-if="isAuthenticated"
-        :username="username"
-        :current-semester="currentSemester"
-        :filtered-courses="filteredCourses"
-        :upcoming-assignments="upcomingAssignments"
-        :pending="pending"
-        :upcoming="upcoming"
-        :loading-courses="loadingCourses"
-        :courses-error="coursesError"
-        @retry-courses="retryCourses"
-      />
+      <ClientOnly>
+        <Dashboard 
+          v-if="isAuthenticated"
+          :username="username"
+          :current-semester="currentSemester"
+          :filtered-courses="filteredCourses"
+          :upcoming-assignments="upcomingAssignments"
+          :pending="pending"
+          :upcoming="upcoming"
+          :loading-courses="loadingCourses"
+          :courses-error="coursesError"
+          @retry-courses="retryCourses"
+        />
+        
+        <template #fallback>
+          <!-- Loading skeleton while the client is hydrating -->
+          <div class="animate-pulse">
+            <div class="h-40 bg-gray-200 dark:bg-gray-800 rounded-2xl mb-8"></div>
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+              <div class="h-24 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>
+              <div class="h-24 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>
+              <div class="h-24 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>
+            </div>
+          </div>
+        </template>
+      </ClientOnly>
       
       <!-- Placeholder content when checking and not authenticated yet -->
       <div v-if="checking && !isAuthenticated" class="animate-pulse">

@@ -135,28 +135,39 @@ export function useAuth() {
   }
 
   /**
-   * Update token if it's about to expire
-   * @param minValidity Minimum validity in seconds
+   * Updates the token if necessary
+   * @param minValidity Minimum validity time in seconds
+   * @returns Promise that resolves to true if the token was refreshed
    */
   const updateToken = async (minValidity = 10) => {
     if (!kc) {
-      console.error('Keycloak not initialized')
       return Promise.reject(new Error('Keycloak not initialized'))
     }
     
     if (!kc.authenticated) {
-      console.warn('Cannot update token - not authenticated')
       return false
     }
-    
+
     try {
-      const updated = await kc.updateToken(minValidity)
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Token update timeout')), 10000)
+      })
+      
+      const updatePromise = kc.updateToken(minValidity)
+      
+      const updated = await Promise.race([updatePromise, timeoutPromise]) as boolean
+      
       if (updated) {
         updateReactiveState()
       }
+      
       return updated
     } catch (error) {
-      console.error('Failed to update token:', error)
+      // If token update fails, the user might need to re-authenticate
+      if (error instanceof Error && (error.message?.includes('timeout') || error.message?.includes('expired'))) {
+        console.warn('Token expired or update timed out - user may need to re-authenticate')
+      }
       throw error
     }
   }
@@ -219,6 +230,58 @@ export function useAuth() {
     }
   }
 
+  /**
+   * Force clear all cached tokens and re-authenticate
+   * This helps resolve token synchronization issues
+   */
+  const forceReAuthentication = async () => {
+    try {
+      // Clear browser storage
+      if (typeof localStorage !== 'undefined') {
+        const keysToRemove = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && (key.includes('kc_') || key.includes('keycloak'))) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key)
+        })
+      }
+      
+      if (typeof sessionStorage !== 'undefined') {
+        const keysToRemove = []
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i)
+          if (key && (key.includes('kc_') || key.includes('keycloak'))) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => {
+          sessionStorage.removeItem(key)
+        })
+      }
+      
+      // Clear Keycloak state
+      if (kc) {
+        kc.clearToken()
+        
+        // Reset reactive state
+        authenticated.value = false
+        keycloakToken.value = ''
+        keycloakUserId.value = ''
+        keycloakUserName.value = ''
+        
+        // Force fresh login
+        return login()
+      }
+    } catch (error) {
+      console.error('Error during force re-authentication:', error)
+      throw error
+    }
+  }
+
   // Return the auth API
   return {
     // State
@@ -235,73 +298,6 @@ export function useAuth() {
     updateAuthState,
     checkAuthentication,
     onAuthEvent,
-    
-    // Debug helper method
-    debug: () => {
-      const isDev = process.env.NODE_ENV === 'development'
-      if (!isDev) {
-        console.warn('Auth debugging is only available in development mode')
-        return null
-      }
-      
-      try {
-        console.group('🔑 Auth Debug Information')
-        console.log('Keycloak instance exists:', !!kc)
-        console.log('Initialized:', isInitialized.value)
-        console.log('Authenticated:', authenticated.value)
-        
-        if (kc) {
-          console.log('KC Authenticated:', kc.authenticated)
-          console.log('KC Token exists:', !!kc.token)
-          
-          if (kc.token) {
-            const tokenPreview = kc.token.substring(0, 20) + '...'
-            console.log('Token preview:', tokenPreview)
-            
-            try {
-              // Decode the JWT token parts without validation
-              const parts = kc.token.split('.')
-              if (parts.length === 3) {
-                const header = JSON.parse(atob(parts[0]))
-                const payload = JSON.parse(atob(parts[1]))
-                
-                console.log('Token header:', header)
-                console.log('Token payload:', {
-                  sub: payload.sub,
-                  exp: new Date(payload.exp * 1000).toLocaleString(),
-                  iat: new Date(payload.iat * 1000).toLocaleString(),
-                  expiresIn: Math.floor((payload.exp * 1000 - Date.now()) / 1000) + ' seconds'
-                })
-              }
-            } catch (e) {
-              console.warn('Error decoding token', e)
-            }
-          }
-        }
-        
-        // Check storage
-        const localStorageToken = localStorage.getItem('kc_token')
-        const sessionStorageToken = sessionStorage.getItem('kc_token')
-        console.log('Token in localStorage:', !!localStorageToken)
-        console.log('Token in sessionStorage:', !!sessionStorageToken)
-        
-        console.groupEnd()
-        
-        // Return diagnostic info that could be useful for debugging
-        return {
-          hasKeycloak: !!kc,
-          initialized: isInitialized.value,
-          authenticated: authenticated.value,
-          kcAuthenticated: kc?.authenticated,
-          hasToken: !!kc?.token,
-          tokenInLocalStorage: !!localStorageToken,
-          tokenInSessionStorage: !!sessionStorageToken
-        }
-      } catch (error) {
-        console.error('Error in auth debug:', error)
-        console.groupEnd()
-        return null
-      }
-    }
+    forceReAuthentication
   }
 }

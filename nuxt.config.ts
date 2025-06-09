@@ -187,13 +187,24 @@ export default defineNuxtConfig({
                 return ''
               }
               
-              // Only return the token if it exists
+              // Force check token expiry to ensure we have fresh tokens
               if (keycloak.token) {
-                // Only log a truncated token in development
-                if (process.env.NODE_ENV === 'development') {
-                  const truncToken = keycloak.token.substring(0, 15) + '...'
-                  console.log(`[GraphQL] Using token: ${truncToken}`)
+                try {
+                  // Parse token to check expiry
+                  const tokenParts = keycloak.token.split('.')
+                  if (tokenParts.length === 3) {
+                    const payload = JSON.parse(atob(tokenParts[1]))
+                    const expiresIn = payload.exp * 1000 - Date.now()
+                    
+                    // If token expires in less than 30 seconds, the GraphQL wrapper should handle refresh
+                    if (expiresIn < 30000 && process.env.NODE_ENV === 'development') {
+                      console.warn('[GraphQL] Token expiring soon, GraphQL wrapper should refresh')
+                    }
+                  }
+                } catch (e) {
+                  console.warn('[GraphQL] Could not parse token expiry:', e)
                 }
+                
                 return keycloak.token
               } else {
                 console.warn('[GraphQL] Token is empty or undefined')
@@ -205,7 +216,7 @@ export default defineNuxtConfig({
             }
           }
         },
-        retainToken: true
+        retainToken: false // Don't cache tokens, always get fresh ones
       }
     }
   },

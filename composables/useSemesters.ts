@@ -58,6 +58,18 @@ export function useSemesters() {
     }
   }
 
+  /**
+   * Filter function to match the old API
+   */
+  const filterBySemester = <T extends { semesterId: string }>(items: T[]): T[] => {
+    // If "All Semesters" is selected, return all items
+    if (currentSemester.value.id === 'all') {
+      return items
+    }
+    // Otherwise filter by the selected semester
+    return items.filter(item => item.semesterId === currentSemester.value.id)
+  }
+
   // Update semesters when computed value changes
   function updateSemesters() {
     const newSemesters = extractSemesters.value
@@ -77,6 +89,7 @@ export function useSemesters() {
     semesters,
     currentSemester,
     setCurrentSemester,
+    filterBySemester,
     updateSemesters
   }
 } 

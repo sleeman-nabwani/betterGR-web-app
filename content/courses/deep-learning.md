@@ -17,7 +17,7 @@ courseMeta:
     - resources
 ---
 
-## Course Overview
+### Course Overview
 
 This course provides an in-depth introduction to deep learning algorithms and neural network architectures.
 Students will learn the theoretical foundations and practical applications of deep learning for various domains including computer vision, natural language processing, and reinforcement learning.

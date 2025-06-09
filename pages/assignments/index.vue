@@ -83,12 +83,12 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useSemester } from '~/composables/useSemester'
+import { useSemesters } from '~/composables/useSemesters'
 import { courses } from '@/data/courses'
 import { assignments as assignmentsData } from '@/data/assignments'
 
 // Get semester data from our composable
-const { currentSemester, filterBySemester } = useSemester()
+const { currentSemester, filterBySemester } = useSemesters()
 
 // Local filters for this page
 const statusFilter = ref('all')

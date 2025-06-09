@@ -1,115 +1,117 @@
-import { ref, Ref } from 'vue'
+import { ref } from 'vue'
 import { useAuth } from './useAuth.js'
-import { useNuxtApp } from 'nuxt/app'
-import type Keycloak from 'keycloak-js'
 
 /**
- * GraphQL client with Keycloak authentication
+ * GraphQL client using auto-generated functions with automatic Keycloak authentication
  */
 export function useGraphQL() {
-  const { token, isAuthenticated, updateToken } = useAuth()
-  const nuxtApp = useNuxtApp()
+  const { isAuthenticated, updateToken, token } = useAuth()
   
   // State
   const loading = ref(false)
   const error = ref<Error | null>(null)
   
   /**
-   * Get the current authentication token
-   */
-  function getAuthToken(): string {
-    // First try to get token from useAuth composable
-    if (token.value) {
-      return token.value
-    }
-    
-    // Fallback to Keycloak instance if available
-    const keycloak = nuxtApp.$keycloak as Keycloak | undefined
-    if (keycloak?.authenticated && keycloak?.token) {
-      return keycloak.token
-    }
-    
-    return ''
-  }
-  
-  /**
    * Refresh the auth token if needed
    */
   async function refreshTokenIfNeeded(): Promise<boolean> {
     try {
-      // Try to refresh the token
-      const refreshed = await updateToken(60) // Refresh if less than 60 seconds left
+      const refreshed = await updateToken(60)
       return !!refreshed
     } catch (error) {
       console.warn('Token refresh failed:', error)
       return false
     }
   }
+
+  /**
+   * Sync the GraphQL client token with the current Keycloak token
+   */
+  function syncGraphQLToken() {
+    const currentToken = token.value
+    
+    if (currentToken) {
+      // Update the GraphQL client token with current Keycloak token
+      // @ts-ignore - Global composable available after nuxt-graphql-client initialization
+      useGqlToken(currentToken)
+    } else {
+      // @ts-ignore - Global composable available after nuxt-graphql-client initialization
+      useGqlToken(null) // Clear the GraphQL token
+    }
+  }
   
   /**
-   * Execute a GraphQL query with authentication
+   * Wrapper function that handles authentication, loading states, and error handling
+   * for all GraphQL operations
    */
-  async function query(gqlQuery: string, variables: any = {}, retryCount = 0) {
-    // Don't even try if we're not authenticated
-    if (!isAuthenticated.value) {
-      error.value = new Error('User not authenticated')
-      return null
-    }
-    
-    loading.value = true
-    error.value = null
-    
-    // Try to refresh token before first attempt
-    if (retryCount === 0) {
-      await refreshTokenIfNeeded()
-    }
-    
+  async function withAuth<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    fallbackValue?: T
+  ): Promise<T> {
     try {
-      // Get auth token
-      const authToken = getAuthToken()
-      
-      if (!authToken) {
-        throw new Error('No authentication token available')
+      if (!isAuthenticated.value) {
+        if (fallbackValue !== undefined) {
+          return fallbackValue
+        }
+        throw new Error('User not authenticated')
       }
       
-      // Make the request
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({
-          query: gqlQuery,
-          variables
-        })
-      })
+      loading.value = true
+      error.value = null
       
-      // Parse response
-      const result = await response.json()
+      // Refresh token before making the request
+      await refreshTokenIfNeeded()
       
-      // Check for GraphQL errors
-      if (result.errors && result.errors.length > 0) {
-        const firstError = result.errors[0]
-        const errorCode = firstError.extensions?.code
-        
-        // If authentication error and we haven't tried refreshing yet
-        if (errorCode === 'UNAUTHENTICATED' && retryCount < 1) {
-          // Try refreshing the token
-          const refreshed = await refreshTokenIfNeeded()
-          
-          if (refreshed) {
-            // Retry the query with the new token
-            return query(gqlQuery, variables, retryCount + 1)
+      // CRITICAL: Always sync the GraphQL token with Keycloak before making requests
+      syncGraphQLToken()
+      
+      // Execute the GraphQL operation
+      return await operation()
+    } catch (err) {
+      // Enhanced error handling for authentication errors
+      console.error(`Error in ${operationName}:`, err)
+      
+      // Better error logging for GraphQL errors
+      if (err && typeof err === 'object') {
+        if ('gqlErrors' in err) {
+          const gqlErrors = (err as any).gqlErrors
+          if (Array.isArray(gqlErrors) && gqlErrors.length > 0) {
+            const firstError = gqlErrors[0]
+            
+            // Check for authentication errors
+            if (firstError.message && firstError.message.includes('Unauthenticated')) {
+              // Try to refresh token one more time
+              try {
+                const refreshed = await updateToken(0) // Force refresh
+                
+                if (refreshed) {
+                  // Sync the GraphQL token with the newly refreshed Keycloak token
+                  syncGraphQLToken()
+                  // Add a delay to ensure the GraphQL client has the updated token
+                  await new Promise(resolve => setTimeout(resolve, 500))
+                  // Retry the operation once with refreshed token
+                  return await operation()
+                } else {
+                  // Force a new sync even if refresh returned false
+                  syncGraphQLToken()
+                  await new Promise(resolve => setTimeout(resolve, 500))
+                  return await operation()
+                }
+              } catch (refreshError) {
+                console.error('Token refresh failed during retry:', refreshError)
+              }
+            }
           }
         }
-        
-        throw new Error(firstError.message || 'GraphQL error')
       }
       
-      return result.data
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error(String(err))
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      error.value = new Error(`Error in ${operationName}: ${errorMessage}`)
+      
+      if (fallbackValue !== undefined) {
+        return fallbackValue
+      }
       throw err
     } finally {
       loading.value = false
@@ -120,34 +122,104 @@ export function useGraphQL() {
    * Fetch student courses
    */
   async function getCourses(studentId: string) {
-    try {
-      if (!isAuthenticated.value) {
-        return []
-      }
-      
-      const data = await query(`
-        query GetStudentCourses($studentId: ID!) {
-          studentCourses(studentId: $studentId) {
-            id
-            name
-            semester
-            description
-          }
-        }
-      `, { studentId })
-      
-      return data?.studentCourses || []
-    } catch (err) {
-      console.error('Error fetching courses:', err)
-      return []
-    }
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetStudentCourses({ studentId })
+      return data.studentCourses || []
+    }, 'getCourses', [])
+  }
+
+  /**
+   * Fetch grades
+   */
+  async function getGrades(studentId: string, courseId?: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetGrades({ studentId, courseId })
+      return data.grades || []
+    }, 'getGrades', [])
+  }
+
+  /**
+   * Create a new course
+   */
+  async function createCourse(input: any) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlCreateCourse({ input })
+      return data.createCourse
+    }, 'createCourse')
+  }
+
+  /**
+   * Update student information
+   */
+  async function updateStudent(id: string, input: any) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlUpdateStudent({ id, input })
+      return data.updateStudent
+    }, 'updateStudent')
+  }
+
+  /**
+   * Get homework by course
+   */
+  async function getHomeworkByCourse(courseId: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetHomeworkByCourse({ courseId })
+      return data.homeworkByCourse || []
+    }, 'getHomeworkByCourse', [])
+  }
+
+  /**
+   * Create homework
+   */
+  async function createHomework(input: any) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlCreateHomework({ input })
+      return data.createHomework
+    }, 'createHomework')
+  }
+
+  /**
+   * Get announcements by course
+   */
+  async function GetAnnouncementsByCourse(courseId: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetAnnouncementsByCourse({ courseId })
+      return data.announcementsByCourse || []
+    }, 'GetAnnouncementsByCourse', [])
   }
   
+  
   return {
+    // Authentication state
     isAuthenticated,
     loading,
     error,
-    query,
-    getCourses
+    
+    // Course operations
+    getCourses,
+    
+    // Grade operations
+    getGrades,
+    
+    // Course management
+    createCourse,
+    GetAnnouncementsByCourse,
+    
+    // Student operations
+    updateStudent,
+    
+    // Homework operations
+    getHomeworkByCourse,
+    createHomework,
+    
+    // Utility functions
+    refreshTokenIfNeeded
   }
 } 

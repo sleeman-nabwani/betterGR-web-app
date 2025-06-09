@@ -68,7 +68,6 @@ export function useCourses() {
     try {
       // Get courses from the GraphQL API
       const data = await getCourses(userId.value)
-      
       if (!data || !Array.isArray(data)) {
         throw new Error('Invalid response from server')
       }
