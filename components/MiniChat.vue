@@ -16,6 +16,7 @@
         </span>
       </button>
 
+<<<<<<< HEAD
       <!-- Chat Window -->
       <div
         v-if="chatStore.isOpen"
@@ -124,6 +125,16 @@
     <div v-else-if="showAuthPrompt" class="fixed bottom-6 right-6 z-50">
       <div class="bg-background border rounded-lg shadow-xl p-4 w-80">
         <div class="flex items-center gap-2 mb-2">
+=======
+    <!-- Chat Window -->
+    <div
+      v-if="chatStore.isOpen"
+      class="bg-background border rounded-lg shadow-xl w-96 h-[600px] flex flex-col overflow-hidden"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between p-4 border-b bg-muted/30">
+        <div class="flex items-center gap-2">
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
           <MessageCircle class="w-5 h-5 text-primary" />
           <h3 class="font-semibold text-sm">Chat Assistant</h3>
         </div>
@@ -145,6 +156,63 @@
           </button>
         </div>
       </div>
+<<<<<<< HEAD
+=======
+
+      <!-- Messages -->
+      <div
+        ref="messagesContainer"
+        class="flex-1 overflow-y-auto p-4 space-y-4"
+      >
+        <!-- Welcome message -->
+        <div v-if="!chatStore.hasMessages" class="text-center text-muted-foreground text-sm py-8">
+          <MessageCircle class="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p>Welcome! How can I assist you today?</p>
+        </div>
+
+        <!-- Messages -->
+        <ChatMessage
+          v-for="message in chatStore.messages"
+          :key="message.id"
+          :message="message"
+          :is-loading="chatStore.isLoading && message === chatStore.lastMessage"
+        />
+
+        <!-- Typing indicator -->
+        <div v-if="chatStore.isStreaming" class="flex justify-start">
+          <div class="bg-muted border rounded-lg px-4 py-2 max-w-[80%]">
+            <div class="flex items-center gap-1">
+              <div class="flex space-x-1">
+                <div class="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div class="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div class="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="border-t p-4">
+        <form @submit.prevent="sendMessage" class="flex gap-2">
+          <input
+            v-model="newMessage"
+            type="text"
+            placeholder="Type a message..."
+            class="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50 bg-background text-foreground dark:bg-input dark:text-foreground"
+            :disabled="chatStore.isLoading"
+            @keydown.enter.prevent="sendMessage"
+          />
+          <button
+            type="submit"
+            :disabled="!newMessage.trim() || chatStore.isLoading"
+            class="px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Send class="w-4 h-4" />
+          </button>
+        </form>
+      </div>
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
     </div>
   </ClientOnly>
 </template>
@@ -237,7 +305,10 @@ const sendMessage = async () => {
   newMessage.value = ''
   
   try {
+<<<<<<< HEAD
     // This will now send the entire chat history to GraphQL
+=======
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
     await sendChatMessage(message)
   } catch (error) {
     console.error('Failed to send message:', error)
@@ -278,4 +349,27 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
 })
-</script> 
+</script>
+
+<style scoped>
+/* Ensure input is visible in dark mode */
+.dark input[type="text"] {
+  background-color: hsl(var(--input)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark input[type="text"]::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Light mode input */
+input[type="text"] {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+input[type="text"]::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+}
+</style>

@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   }
   
   // Get GraphQL endpoint from environment variable
-  const graphqlUrl = process.env.NUXT_PUBLIC_GRAPHQL_HOST || 'http://localhost:1234/query'
+  const graphqlUrl = process.env.GRAPHQL_ENDPOINT 
   
   if (!graphqlUrl) {
     console.error('GraphQL host URL not configured in environment variables')

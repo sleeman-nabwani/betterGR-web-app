@@ -32,7 +32,6 @@ interface CourseGradesGroup {
 
 export function useGrades() {
   const { userId, isAuthenticated } = useAuth()
-  const { getCourses, getGrades } = useGraphQL()
   const { currentSemester } = useSemesters()
 
   // State
@@ -73,20 +72,42 @@ export function useGrades() {
     return groupedData
   })
 
-  // Fetch student courses using auto-generated function
+  // Fetch student courses using direct GraphQL query
   async function fetchCourses() {
     if (!isAuthenticated.value || !userId.value) return
     
     try {
-      const coursesData = await getCourses(userId.value)
-      courses.value = coursesData || []
+      const { token } = useAuth()
+      const response = await $fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token.value}`
+        },
+        body: {
+          query: `
+            query GetStudentCourses($studentId: ID!) {
+              studentCourses(studentId: $studentId) {
+                id
+                name
+                semester
+                description
+              }
+            }
+          `,
+          variables: {
+            studentId: userId.value
+          }
+        }
+      })
+      
+      courses.value = response.data?.studentCourses || []
     } catch (err) {
       console.error('Error fetching courses:', err)
       courses.value = []
     }
   }
 
-  // Fetch grades for current semester using auto-generated function
+  // Fetch grades for current semester using direct GraphQL queries
   async function fetchGrades() {
     if (!isAuthenticated.value || !userId.value) {
       error.value = new Error('You must be logged in to view grades')
@@ -100,26 +121,45 @@ export function useGrades() {
       // Fetch courses first
       await fetchCourses()
       
-      // Get grades using the auto-generated function
-      let gradesData
-      if (currentSemester.value.id === 'all') {
-        // Get all grades (no course filter)
-        gradesData = await getGrades(userId.value)
-      } else {
-        // Get grades for specific semester
-        // Note: The auto-generated function might need semester filtering on the server side
-        // For now, we'll get all grades and filter client-side
-        gradesData = await getGrades(userId.value)
-        
-        // Filter by semester if not "all"
-        if (currentSemester.value.name) {
-          gradesData = gradesData.filter((grade: Grade) => 
-            grade.semester === currentSemester.value.name
-          )
+      // Get grades using direct GraphQL query (like dashboard does)
+      const { token } = useAuth()
+      const response = await $fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token.value}`
+        },
+        body: {
+          query: `
+            query GetGrades($studentId: ID) {
+              grades(studentId: $studentId) {
+                id
+                studentId
+                courseId
+                semester
+                gradeType
+                itemId
+                gradeValue
+                gradedAt
+                comments
+              }
+            }
+          `,
+          variables: {
+            studentId: userId.value
+          }
         }
+      })
+      
+      let gradesData = response.data?.grades || []
+      
+      // Filter by semester if not "all"
+      if (currentSemester.value.id !== 'all' && currentSemester.value.name) {
+        gradesData = gradesData.filter((grade: Grade) => 
+          grade.semester === currentSemester.value.name
+        )
       }
       
-      grades.value = gradesData || []
+      grades.value = gradesData
       console.log('Received grades:', gradesData)
     } catch (err) {
       console.error('Error fetching grades:', err)

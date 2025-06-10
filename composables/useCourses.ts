@@ -1,6 +1,5 @@
 import { ref, Ref } from 'vue'
 import { useAuth } from './useAuth.js'
-import { useGraphQL } from './useGraphQL.js'
 
 /**
  * Course data model
@@ -46,7 +45,6 @@ function createSemesterIdFromName(semester: string): string {
  */
 export function useCourses() {
   const { userId, isAuthenticated } = useAuth()
-  const { getCourses, loading: graphqlLoading } = useGraphQL()
   
   // State
   const courses: Ref<Course[]> = ref([])
@@ -66,11 +64,31 @@ export function useCourses() {
     error.value = null
     
     try {
-      // Get courses from the GraphQL API
-      const data = await getCourses(userId.value)
-      if (!data || !Array.isArray(data)) {
-        throw new Error('Invalid response from server')
-      }
+      // Get courses using direct GraphQL query (like dashboard does)
+      const { token } = useAuth()
+      const response = await $fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token.value}`
+        },
+        body: {
+          query: `
+            query GetStudentCourses($studentId: ID!) {
+              studentCourses(studentId: $studentId) {
+                id
+                name
+                semester
+                description
+              }
+            }
+          `,
+          variables: {
+            studentId: userId.value
+          }
+        }
+      })
+      
+      const data = response.data?.studentCourses || []
       
       // Process the data to match our Course interface
       // Map GraphQL response fields to expected UI fields
