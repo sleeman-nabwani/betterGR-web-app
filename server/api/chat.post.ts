@@ -1,8 +1,18 @@
+<<<<<<< HEAD
 import { defineEventHandler, readBody, createError, setHeader, sendStream } from 'h3'
+=======
+import OpenAI from 'openai'
+import { defineEventHandler, readBody, createError, setHeader, sendStream, getRequestHeaders, getRequestURL } from 'h3'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
+<<<<<<< HEAD
     const { 
       message, 
       sessionId,
@@ -10,6 +20,9 @@ export default defineEventHandler(async (event) => {
       streaming = true,
       context = {}
     } = body
+=======
+    const { message, userId, userRole, conversationHistory = [] } = body
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
 
     if (!message || typeof message !== 'string') {
       throw createError({
@@ -18,6 +31,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+<<<<<<< HEAD
     // Log received chat history for debugging
     console.log('Received chat history:', chatHistory.length, 'messages')
     console.log('Session ID:', sessionId)
@@ -37,16 +51,66 @@ export default defineEventHandler(async (event) => {
           try {
             // Generate response using chat history context
             const mockResponse = generateContextualResponse(message, chatHistory, context, sessionId)
+=======
+    if (!userId || !userRole) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'User authentication required',
+      })
+    }
+
+    // Get user context from GraphQL
+    const userContext = await getUserContext(userId, userRole, event)
+    
+    // Build system prompt with user context
+    const systemPrompt = buildAcademicAssistantPrompt(userContext)
+    
+    // Prepare conversation history with proper OpenAI types
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt }
+    ]
+    
+    // Add conversation history if provided
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Add previous conversation messages
+      conversationHistory.forEach((msg: any) => {
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          messages.push({ role: msg.role, content: msg.content })
+        }
+      })
+    }
+    
+    // Add the current user message
+    messages.push({ role: 'user', content: message })
+
+    // Set headers for Server-Sent Events
+    setHeader(event, 'content-type', 'text/event-stream')
+    setHeader(event, 'cache-control', 'no-cache')
+    setHeader(event, 'connection', 'keep-alive')
+    setHeader(event, 'access-control-allow-origin', '*')
+    setHeader(event, 'access-control-allow-headers', 'Cache-Control')
+
+    // Create a readable stream for SSE
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const openaiStream = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: messages,
+            stream: true,
+            temperature: 0.7,
+            max_tokens: 1000,
+          })
+
+          for await (const chunk of openaiStream) {
+            const content = chunk.choices[0]?.delta?.content || ''
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
             
-            // Simulate streaming by chunking the response
-            const chunks = mockResponse.split(' ')
-            
-            for (let i = 0; i < chunks.length; i++) {
-              const chunk = chunks[i] + (i < chunks.length - 1 ? ' ' : '')
-              
+            if (content) {
               const data = JSON.stringify({
                 id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 role: 'assistant',
+<<<<<<< HEAD
                 content: chunk,
                 timestamp: new Date().toISOString(),
                 sessionId,
@@ -58,13 +122,16 @@ export default defineEventHandler(async (event) => {
                   totalChunks: chunks.length,
                   context
                 }
+=======
+                content: content,
+                timestamp: new Date().toISOString(),
+                isPartial: true,
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
               })
 
               controller.enqueue(`data: ${data}\n\n`)
-              
-              // Simulate streaming delay
-              await new Promise(resolve => setTimeout(resolve, 100))
             }
+<<<<<<< HEAD
 
             // Send completion signal
             const completionData = JSON.stringify({
@@ -96,10 +163,11 @@ export default defineEventHandler(async (event) => {
             })
             controller.enqueue(`data: ${errorData}\n\n`)
             controller.close()
+=======
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
           }
-        },
-      })
 
+<<<<<<< HEAD
       return sendStream(event, stream)
     } else {
       // Non-streaming response in GraphQL format
@@ -119,6 +187,24 @@ export default defineEventHandler(async (event) => {
         }
       }
     }
+=======
+          // Send end signal
+          controller.enqueue('data: [DONE]\n\n')
+          controller.close()
+        } catch (error) {
+          console.error('OpenAI Streaming Error:', error)
+          const errorData = JSON.stringify({
+            error: 'Failed to process chat message',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          })
+          controller.enqueue(`data: ${errorData}\n\n`)
+          controller.close()
+        }
+      },
+    })
+
+    return sendStream(event, stream)
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
   } catch (error) {
     console.error('Chat API Error:', error)
     throw createError({
@@ -128,6 +214,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
+<<<<<<< HEAD
 function generateContextualResponse(userMessage: string, chatHistory: any[], context: any, sessionId?: string): string {
   const message = userMessage.toLowerCase()
   const historyLength = chatHistory.length
@@ -198,4 +285,193 @@ function generateContextualResponse(userMessage: string, chatHistory: any[], con
     : ''
     
   return `I understand you're asking about "${userMessage}". While I don't have specific information about that topic, I can help you with:\n\n**Academic Information:**\n- Course schedules and descriptions\n- Assignment deadlines and requirements\n- Grade inquiries and academic progress\n\n**Technical Support:**\n- Portal navigation\n- Account issues\n- System troubleshooting${historyContext}\n\n*Is there something specific I can help you with?*`
+=======
+// Get user context from GraphQL
+async function getUserContext(userId: string, userRole: 'student' | 'staff', event: any) {
+  try {
+    // Get authorization header from the request 
+    const headers = getRequestHeaders(event)
+    const authHeader = headers.authorization || ''
+    
+    // Use the same approach as working pages - go through /api/graphql proxy
+    
+    if (userRole === 'student') {
+      const response = await fetch(`${getRequestURL(event).origin}/api/graphql`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader
+        },
+        body: JSON.stringify({
+          query: `
+            query GetStudentContext($studentId: ID!) {
+              student(id: $studentId) {
+                id
+                firstName
+                lastName
+                email
+              }
+              studentCourses(studentId: $studentId) {
+                id
+                name
+                semester
+                description
+              }
+              grades(studentId: $studentId) {
+                id
+                studentId
+                courseId
+                semester
+                gradeType
+                itemId
+                gradeValue
+                comments
+                gradedAt
+              }
+            }
+          `,
+          variables: { studentId: userId }
+        })
+      })
+      
+      const data = await response.json()
+      
+      return {
+        type: 'student',
+        data: {
+          student: data.data?.student,
+          courses: data.data?.studentCourses || [],
+          grades: data.data?.grades || []
+        }
+      }
+    } else {
+      const response = await fetch(`${getRequestURL(event).origin}/api/graphql`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader
+        },
+        body: JSON.stringify({
+          query: `
+            query GetStaffContext($staffId: ID!) {
+              staff(id: $staffId) {
+                id
+                firstName
+                lastName
+                email
+              }
+              staffCourses(staffId: $staffId) {
+                id
+                name
+                semester
+                description
+                students {
+                  id
+                  firstName
+                  lastName
+                }
+              }
+            }
+          `,
+          variables: { staffId: userId }
+        })
+      })
+      
+      const data = await response.json()
+      
+      return {
+        type: 'staff',
+        data: {
+          staff: data.data?.staff,
+          courses: data.data?.staffCourses || []
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching user context:', error)
+    return {
+      type: userRole,
+      data: null,
+      error: 'Failed to load user context'
+    }
+  }
+}
+
+function buildAcademicAssistantPrompt(userContext: any): string {
+  const basePrompt = `You are an AI academic assistant for the BetterGR academic management system.
+
+IMPORTANT SECURITY RULES:
+- You can ONLY VIEW and provide information about existing data
+- You CANNOT create, modify, or delete any data
+- You CANNOT make changes to grades, courses, assignments, or any other records
+- You CANNOT perform any write operations
+- If asked to make changes, politely explain you can only provide information
+
+Your role is to help users understand and navigate their academic information by:
+- **DISPLAYING and explaining grades, courses, and assignments when requested**
+- **SHOWING specific grade values, course details, and academic progress**  
+- Answering questions about courses, grades, and assignments
+- Explaining academic policies and procedures
+- Providing summaries and insights about academic progress
+- Helping with general academic guidance
+
+When asked about grades or courses, you SHOULD:
+- Show the actual grade values and details
+- Display course information and descriptions
+- Provide specific academic data from the system
+- Format the information clearly using tables or lists
+
+Response guidelines:
+- Be helpful, professional, and informative
+- Always base responses on actual data when available
+- Display specific information when requested (grades, courses, etc.)
+- Use markdown formatting for better readability (tables, lists, etc.)
+- If you don't have specific information, say so clearly
+- Provide actionable insights when possible
+
+Current user context:`
+
+  if (!userContext || !userContext.data) {
+    return basePrompt + `
+- User authentication successful but detailed information is not available
+- You can provide general academic guidance and answer questions about the system`
+  }
+
+  if (userContext.type === 'student') {
+    const student = userContext.data.student
+    const courses = userContext.data.courses || []
+    const grades = userContext.data.grades || []
+
+    return basePrompt + `
+- Student: ${student?.firstName || 'N/A'} ${student?.lastName || 'N/A'}
+- Email: ${student?.email || 'N/A'}
+- Currently enrolled in ${courses.length} course(s)
+- Courses: ${courses.map((c: any) => c.name).join(', ') || 'None'}
+- Total grades recorded: ${grades.length}
+
+AVAILABLE DATA TO DISPLAY:
+**Courses:**
+${courses.map((c: any) => `- ${c.name} (${c.id}) - ${c.semester}: ${c.description}`).join('\n')}
+
+**Grades:**
+${grades.map((g: any) => `- ${g.gradeType} "${g.itemId}" in course ${g.courseId}: ${g.gradeValue} (${g.comments || 'No comments'})`).join('\n')}
+
+You have access to this detailed information and SHOULD display it when requested. Show grades, course details, and academic insights based on this actual data.`
+  } else if (userContext.type === 'staff') {
+    const staff = userContext.data.staff
+    const courses = userContext.data.courses || []
+
+    return basePrompt + `
+- Staff Member: ${staff?.firstName || 'N/A'} ${staff?.lastName || 'N/A'}
+- Email: ${staff?.email || 'N/A'}
+- Teaching ${courses.length} course(s)
+- Courses: ${courses.map((c: any) => c.name).join(', ') || 'None'}
+
+You have access to information about the courses they teach and student information.`
+  }
+
+  return basePrompt + `
+- User type: ${userContext.type}
+- Limited context available`
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
 } 

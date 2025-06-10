@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { computed } from 'vue'
 
 // Type declarations for auto-imported functions
@@ -13,6 +14,12 @@ interface ChatMessage {
   content: string             // WHAT they said
   timestamp: Date
 }
+=======
+import { useUser } from './useUser.js'
+import { useAuth } from './useAuth.js'
+import { useChatStore } from '~/stores/chat.js'
+import { computed } from 'vue'
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
 
 export interface ChatResponse {
   id: string
@@ -29,6 +36,7 @@ export interface ChatResponse {
 
 export function useChat() {
   const chatStore = useChatStore()
+<<<<<<< HEAD
   const { sendChatMessage: sendChatToGraphQL } = useGraphQL()
   
   // Get current user context from real auth
@@ -52,6 +60,10 @@ export function useChat() {
       isAuthenticated: isAuthenticated.value
     }
   }
+=======
+  const { user } = useUser() 
+  const { token } = useAuth()
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
 
   async function sendMessage(message: string) {
     try {
@@ -67,6 +79,7 @@ export function useChat() {
         content: message,
       })
 
+<<<<<<< HEAD
       console.log('Sending chat message with context:', chatStore.context)
       console.log('Chat history:', chatStore.chatHistory)
 
@@ -92,14 +105,112 @@ export function useChat() {
         })
       }
 
+=======
+      await handleStreamingResponse(message)
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
     } catch (error) {
       console.error('Error sending message:', error)
       chatStore.addMessage({
         role: 'assistant',
-        content: 'Sorry, I encountered an error while processing your message.',
+        content: 'Sorry, I encountered an error while processing your message. Please try again.',
       })
     } finally {
       chatStore.setLoading(false)
+<<<<<<< HEAD
+=======
+      chatStore.setStreaming(false)
+    }
+  }
+
+  async function handleStreamingResponse(message: string) {
+    chatStore.setStreaming(true)
+    
+    // Add initial assistant message
+    let assistantMessage = chatStore.addMessage({
+      role: 'assistant',
+      content: '',
+    })
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.value}`
+        },
+        body: JSON.stringify({
+          message,
+          userId: user.value?.id,
+          userRole: user.value?.role,
+          conversationHistory: chatStore.messages.map((msg: any) => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      if (!response.body) {
+        throw new Error('No response body')
+      }
+
+      const reader = response.body
+        .pipeThrough(new TextDecoderStream())
+        .getReader()
+      let buffer = ''
+
+      while (true) {
+        const { value, done } = await reader.read()
+
+        if (done) {
+          if (buffer.trim()) {
+            console.warn('Stream ended with unparsed data:', buffer)
+          }
+          break
+        }
+
+        buffer += value
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice('data: '.length).trim()
+            
+            if (data === '[DONE]') {
+              return
+            }
+
+            try {
+              const jsonData: ChatResponse = JSON.parse(data)
+              
+              if (jsonData.error) {
+                console.error('Stream error:', jsonData.error)
+                chatStore.addMessage({
+                  role: 'assistant',
+                  content: `Sorry, I encountered an error: ${jsonData.error}. Please try again.`,
+                })
+                break
+              }
+
+              if (jsonData.content) {
+                if (assistantMessage && assistantMessage.role === 'assistant') {
+                  assistantMessage.content += jsonData.content
+                }
+              }
+            } catch (parseError) {
+              console.warn('Error parsing JSON:', parseError)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Streaming error:', error)
+      throw error
+>>>>>>> c42e598 (AI chat bot implementation with openAI)
     }
   }
 

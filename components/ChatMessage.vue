@@ -31,7 +31,7 @@
             <span class="text-xs">Thinking...</span>
           </div>
         </div>
-        <div v-else class="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0" v-html="formattedContent"></div>
+        <div v-else class="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 text-foreground" v-html="formattedContent"></div>
       </div>
 
       <!-- Timestamp -->
@@ -111,4 +111,37 @@ function formatTime(timestamp: Date): string {
     hour12: true,
   }).format(timestamp)
 }
-</script> 
+</script>
+
+<style scoped>
+/* Ensure text is visible in dark mode */
+.dark .prose p,
+.dark .prose div,
+.dark .prose span,
+.dark .prose li,
+.dark .prose strong,
+.dark .prose em {
+  color: rgb(229, 231, 235) !important; /* text-gray-200 */
+}
+
+/* Code blocks in dark mode */
+.dark .prose code {
+  background-color: rgba(55, 65, 81, 0.5) !important; /* bg-gray-700/50 */
+  color: rgb(229, 231, 235) !important; /* text-gray-200 */
+}
+
+/* Links in dark mode */
+.dark .prose a {
+  color: rgb(96, 165, 250) !important; /* text-blue-400 */
+}
+
+/* Light mode text colors */
+.prose p,
+.prose div, 
+.prose span,
+.prose li,
+.prose strong,
+.prose em {
+  color: rgb(55, 65, 81) !important; /* text-gray-700 */
+}
+</style>
