@@ -151,6 +151,38 @@ export function useGraphQL() {
     }, 'createCourse')
   }
 
+  /**
+   * Update course
+   */
+  async function updateCourse(id: string, input: any) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlUpdateCourse({ id, input })
+      return data.updateCourse
+    }, 'updateCourse')
+  }
+
+  /**
+   * Delete course
+   */
+  async function deleteCourse(id: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlDeleteCourse({ id })
+      return data.deleteCourse
+    }, 'deleteCourse')
+  }
+
+  /**
+   * Get all courses for admin
+   */
+  async function getAllCourses() {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetAllCourses()
+      return data.courses || []
+    }, 'getAllCourses', [])
+  }
 
   /**
    * Get student information
@@ -238,8 +270,106 @@ export function useGraphQL() {
       }
     }, 'sendChatMessage')
   }
-  
-  
+
+  /**
+   * Create a new student
+   */
+  async function createStudent(input: any) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlCreateStudent({ input })
+      return data.createStudent
+    }, 'createStudent')
+  }
+
+  /**
+   * Delete student
+   */
+  async function deleteStudent(id: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlDeleteStudent({ id })
+      return data.deleteStudent
+    }, 'deleteStudent')
+  }
+
+  /**
+   * Get all students for admin
+   */
+  async function getAllStudents() {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetAllStudents()
+      return data.students || []
+    }, 'getAllStudents', [])
+  }
+
+  /**
+   * Add student to course (enrollment)
+   */
+  async function addStudentToCourse(courseId: string, studentId: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlAddStudentToCourse({ courseId, studentId })
+      return data.addStudentToCourse
+    }, 'addStudentToCourse')
+  }
+
+  /**
+   * Remove student from course (unenrollment)
+   */
+  async function removeStudentFromCourse(courseId: string, studentId: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlRemoveStudentFromCourse({ courseId, studentId })
+      return data.removeStudentFromCourse
+    }, 'removeStudentFromCourse')
+  }
+
+  /**
+   * Get course students (enrollments)
+   */
+  async function getCourseStudents(courseId: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetCourseStudents({ courseId })
+      return data.courseStudents || []
+    }, 'getCourseStudents', [])
+  }
+
+  /**
+   * Create announcement
+   */
+  async function createAnnouncement(input: any) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlCreateAnnouncement({ input })
+      return data.createAnnouncement
+    }, 'createAnnouncement')
+  }
+
+  /**
+   * Delete announcement
+   */
+  async function deleteAnnouncement(courseId: string, announcementId: string) {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlDeleteAnnouncement({ courseId, announcementId })
+      return data.deleteAnnouncement
+    }, 'deleteAnnouncement')
+  }
+
+  /**
+   * Get all announcements for admin
+   */
+  async function getAllAnnouncements() {
+    return withAuth(async () => {
+      // @ts-ignore - Global function available after GraphQL code generation
+      const data = await GqlGetAllAnnouncements()
+      return data.announcements || []
+    }, 'getAllAnnouncements', [])
+  }
+
   return {
     // Authentication state
     isAuthenticated,
@@ -248,17 +378,33 @@ export function useGraphQL() {
     
     // Course operations
     getCourses,
+    getAllCourses,
+    createCourse,
+    updateCourse,
+    deleteCourse,
     
     // Grade operations
     getGrades,
     
     // Course management
-    createCourse,
     GetAnnouncementsByCourse,
     
     // Student operations
     getStudent,
     updateStudent,
+    getAllStudents,
+    createStudent,
+    deleteStudent,
+    
+    // Enrollment operations
+    addStudentToCourse,
+    removeStudentFromCourse,
+    getCourseStudents,
+    
+    // Announcement operations
+    getAllAnnouncements,
+    createAnnouncement,
+    deleteAnnouncement,
     
     // Homework operations
     getHomeworkByCourse,

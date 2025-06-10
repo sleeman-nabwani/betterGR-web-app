@@ -56,6 +56,7 @@ import { useRuntimeConfig } from 'nuxt/app'
 import { useDashboard } from '~/composables/useDashboard'
 import AuthStatusBanner from '~/components/AuthStatusBanner.vue'
 import Dashboard from '~/components/Dashboard.vue'
+import { useAuth } from '~/composables/useAuth'
 
 const router = useRouter()
 const route = useRoute()
@@ -76,6 +77,9 @@ const {
   fetchCourses
 } = useDashboard()
 
+// Import auth composable to check for staff status
+const auth = useAuth()
+
 // Function to retry fetching courses
 const retryCourses = () => {
   fetchCourses();
@@ -89,6 +93,14 @@ watch(isAuthenticated, (newValue) => {
     if (redirectPath) {
       sessionStorage.removeItem('login_redirect_path')
       router.push(redirectPath)
+      return
+    }
+    
+    // If user is staff and somehow ended up here, redirect to admin
+    if (auth.isStaff.value) {
+      console.log('🔄 Staff user on home page, redirecting to admin')
+      router.push('/admin')
+      return
     }
   }
   // If not authenticated and not on home or callback, redirect to home
@@ -97,17 +109,18 @@ watch(isAuthenticated, (newValue) => {
   }
 })
 
+// Also watch for staff status changes
+watch(() => auth.isStaff.value, (isStaff) => {
+  if (isStaff && isAuthenticated.value && route.path === '/') {
+    console.log('🔄 User became staff, redirecting to admin')
+    router.push('/admin')
+  }
+})
+
 // When the page loads, check if we need to restore authentication
 onMounted(() => {
-  // Add a small timeout to ensure Keycloak has fully initialized
-  setTimeout(() => {
-    // Get the auth composable and check if we need to restore authentication
-    import('~/composables/useAuth').then(({ useAuth }) => {
-      const auth = useAuth();
-      if (!isAuthenticated.value) {
-        auth.checkAuthentication();
-      }
-    });
-  }, 500);
+  // Authentication is now handled by middleware and useDashboard composable
+  // No need for manual authentication check here
+  console.log('🏠 Home page mounted')
 })
 </script>

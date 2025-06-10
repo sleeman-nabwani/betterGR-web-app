@@ -46,7 +46,7 @@ export function useChat() {
     
     return {
       userId: userId.value || 'anonymous',
-      userRole: 'student', // TODO: Add role to Keycloak token if needed
+      userRole: 'student',
       courseId: courseId,
       userName: userName.value,
       isAuthenticated: isAuthenticated.value
