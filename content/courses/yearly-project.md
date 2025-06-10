@@ -13,7 +13,8 @@ description: "A comprehensive yearly project course where students work on real-
 
 ## Course Overview
 
-This is a comprehensive yearly project course where students apply their knowledge of software engineering principles to develop real-world applications. Students work in teams to design, implement, and deploy full-stack applications.
+This is a comprehensive yearly project course where students apply their knowledge of software engineering 
+principles to develop real-world applications. Students work in teams to design, implement, and deploy full-stack applications.
 
 ## Learning Objectives
 

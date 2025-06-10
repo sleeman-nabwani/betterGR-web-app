@@ -16,7 +16,6 @@
         </span>
       </button>
 
-<<<<<<< HEAD
       <!-- Chat Window -->
       <div
         v-if="chatStore.isOpen"
@@ -121,11 +120,6 @@
       </button>
     </div>
     
-    <!-- Authentication prompt for unauthenticated users -->
-    <div v-else-if="showAuthPrompt" class="fixed bottom-6 right-6 z-50">
-      <div class="bg-background border rounded-lg shadow-xl p-4 w-80">
-        <div class="flex items-center gap-2 mb-2">
-=======
     <!-- Chat Window -->
     <div
       v-if="chatStore.isOpen"
@@ -134,30 +128,25 @@
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b bg-muted/30">
         <div class="flex items-center gap-2">
->>>>>>> c42e598 (AI chat bot implementation with openAI)
           <MessageCircle class="w-5 h-5 text-primary" />
           <h3 class="font-semibold text-sm">Chat Assistant</h3>
         </div>
-        <p class="text-sm text-muted-foreground mb-3">
-          Please log in to access the chat assistant.
-        </p>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-1">
           <button
-            @click="handleLogin"
-            class="flex-1 px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm transition-colors"
+            @click="clearChat"
+            class="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+            title="Clear chat"
           >
-            Log In
+            <Trash2 class="w-4 h-4" />
           </button>
           <button
-            @click="hideAuthPrompt"
-            class="px-3 py-2 border rounded-md hover:bg-muted text-sm transition-colors"
+            @click="chatStore.closeChat"
+            class="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
           >
             <X class="w-4 h-4" />
           </button>
         </div>
       </div>
-<<<<<<< HEAD
-=======
 
       <!-- Messages -->
       <div
@@ -212,7 +201,6 @@
           </button>
         </form>
       </div>
->>>>>>> c42e598 (AI chat bot implementation with openAI)
     </div>
   </ClientOnly>
 </template>
@@ -305,10 +293,6 @@ const sendMessage = async () => {
   newMessage.value = ''
   
   try {
-<<<<<<< HEAD
-    // This will now send the entire chat history to GraphQL
-=======
->>>>>>> c42e598 (AI chat bot implementation with openAI)
     await sendChatMessage(message)
   } catch (error) {
     console.error('Failed to send message:', error)

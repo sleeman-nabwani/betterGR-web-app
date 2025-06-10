@@ -16,7 +16,7 @@ export function useUser() {
   const user = ref<User | null>(null)
   const { isAuthenticated, userId, userName } = useAuth()
 
-  // Initialize user from authentication - keep it simple for chat
+  // Initialize user from authentication - get real user data
   const initializeUser = async () => {
     try {
       if (!isAuthenticated.value || !userId.value) {
@@ -24,16 +24,21 @@ export function useUser() {
         return
       }
 
-      // For chat purposes, create minimal user data from Keycloak
-      // This won't interfere with existing GraphQL user management
+      const { hasRole } = useAuth()
+      
+      // Determine user role from Keycloak roles
+      const userRole: 'student' | 'staff' = hasRole('staff') || hasRole('admin') ? 'staff' : 'student'
+      
+      // Create user data from Keycloak token
       const userData: User = {
         id: userId.value,
         firstName: userName.value.split(' ')[0] || 'User',
         lastName: userName.value.split(' ').slice(1).join(' ') || '',
-        email: userName.value + '@technion.ac.il',
-        role: 'student' // Default to student for now
+        email: userName.value.includes('@') ? userName.value : userName.value + '@technion.ac.il',
+        role: userRole
       }
       
+      console.log('Initialized user for chat:', userData)
       user.value = userData
     } catch (error) {
       console.error('Failed to initialize user:', error)
