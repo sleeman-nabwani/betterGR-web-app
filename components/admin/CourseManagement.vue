@@ -10,8 +10,7 @@
             v-model="selectedSemester"
             class="px-3 py-1 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
           >
-            <option value="all">All Semesters</option>
-            <option v-for="semester in availableSemesters.filter(s => s !== 'all')" :key="semester" :value="semester">
+            <option v-for="semester in availableSemesters" :key="semester" :value="semester">
               {{ semester }}
             </option>
           </select>
@@ -148,7 +147,7 @@
       </div>
 
       <div v-if="filteredCourses.length === 0" class="text-center py-8 text-muted-foreground">
-        {{ selectedSemester === 'all' ? 'No courses found. Add your first course to get started.' : `No courses found for ${selectedSemester} semester.` }}
+        {{ selectedSemester ? `No courses found for ${selectedSemester} semester.` : 'No courses found. Add your first course to get started.' }}
       </div>
     </div>
 
@@ -281,7 +280,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useAdminData } from '~/composables/useAdminData'
 
 interface Course {
@@ -312,12 +311,13 @@ const {
   getCourseAnnouncements,
   getCourseAnnouncementsCount,
   loadAllData,
-  refreshData,
+  loadCoursesForSemester,
   createCourse,
   updateCourse,
   deleteCourse,
   createAnnouncement,
-  deleteAnnouncement
+  deleteAnnouncement,
+  refreshData
 } = useAdminData()
 
 // Local state for UI
@@ -462,7 +462,14 @@ const formatDate = (date: Date) => {
   }).format(date)
 }
 
-// Load data on component mount
+// Watch for semester changes and reload courses
+watch(selectedSemester, async (newSemester) => {
+  if (newSemester) {
+    await loadCoursesForSemester(newSemester)
+  }
+})
+
+// Load initial data
 onMounted(() => {
   loadAllData()
 })

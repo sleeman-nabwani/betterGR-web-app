@@ -27,16 +27,16 @@ export function useAdminData() {
   const error = ref<Error | null>(null)
   const courses = ref<Course[]>([])
   const announcements = ref<Announcement[]>([])
-  const selectedSemester = ref<string>('all')
+  const selectedSemester = ref<string>('')
 
   // Computed properties
   const availableSemesters = computed(() => {
     const semesters = [...new Set(courses.value.map(course => course.semester))]
-    return ['all', ...semesters.sort()]
+    return semesters.sort()
   })
 
   const filteredCourses = computed(() => {
-    if (selectedSemester.value === 'all') {
+    if (!selectedSemester.value) {
       return courses.value
     }
     return courses.value.filter(course => course.semester === selectedSemester.value)
@@ -51,6 +51,13 @@ export function useAdminData() {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, 10)
   })
+
+  // Auto-select first semester when courses are loaded
+  const autoSelectFirstSemester = () => {
+    if (availableSemesters.value.length > 0 && !selectedSemester.value) {
+      selectedSemester.value = availableSemesters.value[0]
+    }
+  }
 
   // Utility functions
   const getCourseAnnouncements = (courseId: string): Announcement[] => {
@@ -73,11 +80,36 @@ export function useAdminData() {
     }
 
     try {
-      const data = await graphql.getAllCourses()
+      let data
+      if (selectedSemester.value) {
+        // Load courses for specific semester
+        data = await graphql.getCoursesBySemester(selectedSemester.value)
+      } else {
+        // Load all courses to get available semesters
+        data = await graphql.getAllCourses()
+      }
       courses.value = data || []
+      autoSelectFirstSemester()
     } catch (err) {
       console.error('Error loading courses:', err)
       throw err
+    }
+  }
+
+  // Load courses when semester selection changes
+  const loadCoursesForSemester = async (semester: string) => {
+    selectedSemester.value = semester
+    loading.value = true
+    error.value = null
+    
+    try {
+      const data = await graphql.getCoursesBySemester(semester)
+      courses.value = data || []
+    } catch (err) {
+      error.value = err as Error
+      console.error('Error loading courses for semester:', err)
+    } finally {
+      loading.value = false
     }
   }
 
@@ -129,6 +161,9 @@ export function useAdminData() {
     try {
       // Load courses first
       await loadCourses()
+      
+      // Auto-select first semester after courses are loaded
+      autoSelectFirstSemester()
       
       // Then load announcements for those courses
       await loadAllAnnouncements()
@@ -247,10 +282,12 @@ export function useAdminData() {
     getCourseAnnouncements,
     getCourseName,
     getCourseAnnouncementsCount,
+    autoSelectFirstSemester,
     
     // Data loading
     loadAllData,
     loadCourses,
+    loadCoursesForSemester,
     loadAllAnnouncements,
     refreshData,
     

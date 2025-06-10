@@ -178,10 +178,27 @@ export function useGraphQL() {
    */
   async function getAllCourses() {
     return withAuth(async () => {
+      // TODO: Replace with proper GetAllCourses when backend implements it
       // @ts-ignore - Global function available after GraphQL code generation
-      const data = await GqlGetAllCourses()
-      return data.courses || []
+      // const data = await GqlGetAllCourses()
+      // return data.courses || []
+      console.warn('getAllCourses: Backend query not implemented yet - returning empty array')
+      return []
     }, 'getAllCourses', [])
+  }
+
+  /**
+   * Get courses by semester
+   */
+  async function getCoursesBySemester(semester: string) {
+    return withAuth(async () => {
+      // TODO: Replace with proper GetCoursesBySemester when backend implements it
+      // @ts-ignore - Global function available after GraphQL code generation
+      // const data = await GqlGetCoursesBySemester({ semester })
+      // return data.coursesBySemester || []
+      console.warn(`getCoursesBySemester: Backend query not implemented yet - returning empty array for semester: ${semester}`)
+      return []
+    }, 'getCoursesBySemester', [])
   }
 
   /**
@@ -414,6 +431,9 @@ export function useGraphQL() {
     sendChatMessage,
     
     // Utility functions
-    refreshTokenIfNeeded
+    refreshTokenIfNeeded,
+    
+    // New functions
+    getCoursesBySemester
   }
 } 
