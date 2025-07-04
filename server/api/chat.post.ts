@@ -1,9 +1,7 @@
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { defineEventHandler, readBody, createError, setHeader, sendStream, getRequestHeaders, getRequestURL } from 'h3'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+const genAI = new GoogleGenerativeAI('AIzaSyAX9gSjLvaNwKCfwTrw5MNVLNKCJyE9KTU')
 
 export default defineEventHandler(async (event) => {
   try {
@@ -30,23 +28,16 @@ export default defineEventHandler(async (event) => {
     // Build system prompt with user context
     const systemPrompt = buildAcademicAssistantPrompt(userContext)
     
-    // Prepare conversation history with proper OpenAI types
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: systemPrompt }
+    // Build conversation history for Gemini
+    const geminiHistory = [
+      // Add conversation history if provided
+      ...(conversationHistory && conversationHistory.length > 0 
+        ? conversationHistory.map((msg: any) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }]
+          }))
+        : []),
     ]
-    
-    // Add conversation history if provided
-    if (conversationHistory && conversationHistory.length > 0) {
-      // Add previous conversation messages
-      conversationHistory.forEach((msg: any) => {
-        if (msg.role === 'user' || msg.role === 'assistant') {
-          messages.push({ role: msg.role, content: msg.content })
-        }
-      })
-    }
-    
-    // Add the current user message
-    messages.push({ role: 'user', content: message })
 
     // Set headers for Server-Sent Events
     setHeader(event, 'content-type', 'text/event-stream')
@@ -59,16 +50,27 @@ export default defineEventHandler(async (event) => {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const openaiStream = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: messages,
-            stream: true,
-            temperature: 0.7,
-            max_tokens: 1000,
+          // Get Gemini model
+          const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+          
+          // Start a chat session with history
+          const chat = model.startChat({
+            history: geminiHistory,
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1000,
+            },
           })
-
-          for await (const chunk of openaiStream) {
-            const content = chunk.choices[0]?.delta?.content || ''
+          
+          // Send the current message and get streaming response
+          const result = await chat.sendMessageStream([
+            { text: systemPrompt },
+            { text: message }
+          ])
+          
+          // Stream the response
+          for await (const chunk of result.stream) {
+            const content = chunk.text()
             
             if (content) {
               const data = JSON.stringify({
@@ -87,7 +89,7 @@ export default defineEventHandler(async (event) => {
           controller.enqueue('data: [DONE]\n\n')
           controller.close()
         } catch (error) {
-          console.error('OpenAI Streaming Error:', error)
+          console.error('Gemini Streaming Error:', error)
           const errorData = JSON.stringify({
             error: 'Failed to process chat message',
             message: error instanceof Error ? error.message : 'Unknown error',

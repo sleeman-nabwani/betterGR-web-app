@@ -24,6 +24,7 @@ const keycloakConfig = {
 
 // Determine if we're in development mode
 const isDev = process.env.NODE_ENV !== 'production';
+const isBuild = process.env.NODE_ENV === 'production' || process.env.NUXT_BUILD === 'true';
 
 export default defineNuxtConfig({
   modules: [
@@ -132,6 +133,32 @@ export default defineNuxtConfig({
     enabled: isDev
   },
 
+  vite: {
+    server: {
+      fs: {
+        allow: ['..']
+      },
+      watch: {
+        usePolling: true,
+        interval: 1000
+      }
+    },
+    optimizeDeps: {
+      include: ['keycloak-js']
+    },
+    build: {
+      rollupOptions: {
+        external: [],
+        output: {
+          manualChunks: undefined
+        }
+      }
+    },
+    esbuild: {
+      target: 'node14'
+    }
+  },
+
   build: { 
     transpile: ['lucide-vue-next'] 
   },
@@ -168,10 +195,12 @@ export default defineNuxtConfig({
   },
 
   'graphql-client':{
+    codegen: !isBuild, // Disable codegen during build
     clients: {
       default: {
         host: '/api/graphql',
-        introspectionHost: process.env.NUXT_PUBLIC_GRAPHQL_HOST,
+        introspectionHost: (isDev && !isBuild) ? process.env.NUXT_PUBLIC_GRAPHQL_HOST : undefined,
+        schema: isBuild ? './generated/graphql.ts' : undefined, // Use existing schema during build
         token: {
           type: 'Bearer',
           name: 'Authorization',

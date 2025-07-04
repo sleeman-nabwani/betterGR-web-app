@@ -3,7 +3,7 @@
     <div class="bg-card rounded-lg border p-6 mb-6">
       <h1 class="text-2xl font-bold mb-4">🤖 Chat Integration Test</h1>
       <p class="text-muted-foreground mb-4">
-        This page demonstrates the OpenAI chat integration with user context and GraphQL data.
+        This page demonstrates the Gemini AI chat integration with user context and GraphQL data.
       </p>
 
       <!-- Current User Display -->
@@ -31,8 +31,8 @@
         <h3 class="font-semibold mb-2">🔧 Environment Status</h3>
         <div class="space-y-2 text-sm">
           <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full" :class="hasOpenAiKey ? 'bg-green-500' : 'bg-red-500'"></div>
-            <span>OpenAI API Key: {{ hasOpenAiKey ? 'Configured' : 'Missing' }}</span>
+            <div class="w-3 h-3 rounded-full" :class="hasGeminiKey ? 'bg-green-500' : 'bg-red-500'"></div>
+            <span>Gemini API Key: {{ hasGeminiKey ? 'Configured' : 'Missing' }}</span>
           </div>
           <div class="flex items-center gap-2">
             <div class="w-3 h-3 rounded-full" :class="hasGraphQL ? 'bg-green-500' : 'bg-yellow-500'"></div>
@@ -85,15 +85,15 @@
         <p><strong>Setup Instructions:</strong></p>
         <ol class="list-decimal list-inside space-y-1 mt-2">
           <li>Ensure you're logged in to your BetterGR account</li>
-          <li>Add <code>OPENAI_API_KEY=your_key_here</code> to your <code>.env</code> file</li>
+          <li>Add <code>GEMINI_API_KEY=your_key_here</code> to your <code>.env</code> file</li>
           <li>Make sure your GraphQL backend is running on the configured endpoint</li>
           <li>Click the floating chat button to start chatting, or use test queries above</li>
         </ol>
         
         <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p class="text-blue-800 text-sm">
-            <strong>💡 OpenAI API Key Required:</strong> You need an OpenAI API key from 
-            <a href="https://platform.openai.com/api-keys" target="_blank" class="underline">platform.openai.com</a> 
+            <strong>💡 Gemini API Key Required:</strong> You need a Gemini API key from 
+            <a href="https://makersuite.google.com/app/apikey" target="_blank" class="underline">Google AI Studio</a> 
             to use the chat functionality.
           </p>
         </div>
@@ -114,7 +114,7 @@
 const { user } = useUser()
 
 // Environment checks
-const hasOpenAiKey = ref(true) // This would check if API key exists in production
+const hasGeminiKey = ref(true) // This would check if API key exists in production
 const hasGraphQL = ref(true) // This would check if GraphQL endpoint is accessible
 
 // Send test message

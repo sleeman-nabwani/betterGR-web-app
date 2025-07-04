@@ -7,9 +7,12 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "codegen": "graphql-codegen --require dotenv/config --config codegen.yml --watch"
+    "codegen": "graphql-codegen --require dotenv/config --config codegen.yml --watch",
+    "clean": "rimraf .nuxt dist node_modules/.cache",
+    "dev:clean": "npm run clean && npm run dev"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@nuxt/content": "^3.5.1",
     "@nuxtjs/mdc": "^0.17.0",
     "@pinia/nuxt": "^0.11.0",
